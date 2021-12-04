@@ -1,6 +1,8 @@
 ﻿#include<Windows.h>
 #include<iostream>
 #include<vector>
+#include "PEParser.h"
+#include "Packer.h"
 #define DEBUG 1
 
 void printHeader() {
@@ -78,19 +80,30 @@ int main(int argc, char *argv[]) {
 		return -1;
 	}
 	DWORD fileSize;
-	PBYTE fileBuffer = readBinary(argv[1], fileSize);
-	if (!fileBuffer) {
+	PBYTE inputFileBuffer = readBinary(argv[1], fileSize);
+	if (!inputFileBuffer) {
 		std::cout << "[!] Can't read the input exe" << std::endl;
 		return -1;
 	}
+	parseInput(inputFileBuffer);
 	std::cout << "[+] Input file is read" << std::endl;
-	BOOL result = writeBinary(argv[2], fileBuffer, fileSize);
+	PBYTE outputBuffer = (PBYTE)VirtualAlloc(NULL, fileSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	if (outputBuffer == NULL) {
+#ifdef DEBUG
+		std::cout << "VirtualAlloc Error: " << GetLastError() << std::endl;
+#endif 
+		return -1;
+	}
+	fileSizeWithoutOverlay(inputFileBuffer);
+	preparePackedFile(outputBuffer, inputFileBuffer);
+	BOOL result = writeBinary(argv[2], outputBuffer, fileSize);
 	if (result == FALSE) {
 		std::cout << "[!] Can't write the output exe" << std::endl;
 		return -1;
 	}
 	std::cout << "[+] Output file is written" << std::endl;
-	VirtualFree(fileBuffer,0,MEM_RELEASE);
+	VirtualFree(inputFileBuffer,0,MEM_RELEASE);
+	VirtualFree(outputBuffer, 0, MEM_RELEASE);
 	std::cout << "[+] Enjoy your new file: " << argv[2] << std::endl;
 	return 0;
 }

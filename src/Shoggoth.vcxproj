@@ -141,6 +141,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Packer.cpp" />
+    <ClCompile Include="PEParser.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Packer.h" />
+    <ClInclude Include="PEParser.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
