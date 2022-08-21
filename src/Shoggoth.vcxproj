@@ -114,7 +114,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
@@ -140,13 +140,137 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="asmjit\core\archtraits.cpp" />
+    <ClCompile Include="asmjit\core\assembler.cpp" />
+    <ClCompile Include="asmjit\core\builder.cpp" />
+    <ClCompile Include="asmjit\core\codeholder.cpp" />
+    <ClCompile Include="asmjit\core\codewriter.cpp" />
+    <ClCompile Include="asmjit\core\compiler.cpp" />
+    <ClCompile Include="asmjit\core\constpool.cpp" />
+    <ClCompile Include="asmjit\core\cpuinfo.cpp" />
+    <ClCompile Include="asmjit\core\emithelper.cpp" />
+    <ClCompile Include="asmjit\core\emitter.cpp" />
+    <ClCompile Include="asmjit\core\emitterutils.cpp" />
+    <ClCompile Include="asmjit\core\environment.cpp" />
+    <ClCompile Include="asmjit\core\errorhandler.cpp" />
+    <ClCompile Include="asmjit\core\formatter.cpp" />
+    <ClCompile Include="asmjit\core\func.cpp" />
+    <ClCompile Include="asmjit\core\funcargscontext.cpp" />
+    <ClCompile Include="asmjit\core\globals.cpp" />
+    <ClCompile Include="asmjit\core\inst.cpp" />
+    <ClCompile Include="asmjit\core\jitallocator.cpp" />
+    <ClCompile Include="asmjit\core\jitruntime.cpp" />
+    <ClCompile Include="asmjit\core\logger.cpp" />
+    <ClCompile Include="asmjit\core\operand.cpp" />
+    <ClCompile Include="asmjit\core\osutils.cpp" />
+    <ClCompile Include="asmjit\core\ralocal.cpp" />
+    <ClCompile Include="asmjit\core\rapass.cpp" />
+    <ClCompile Include="asmjit\core\rastack.cpp" />
+    <ClCompile Include="asmjit\core\string.cpp" />
+    <ClCompile Include="asmjit\core\support.cpp" />
+    <ClCompile Include="asmjit\core\target.cpp" />
+    <ClCompile Include="asmjit\core\type.cpp" />
+    <ClCompile Include="asmjit\core\virtmem.cpp" />
+    <ClCompile Include="asmjit\core\zone.cpp" />
+    <ClCompile Include="asmjit\core\zonehash.cpp" />
+    <ClCompile Include="asmjit\core\zonelist.cpp" />
+    <ClCompile Include="asmjit\core\zonestack.cpp" />
+    <ClCompile Include="asmjit\core\zonetree.cpp" />
+    <ClCompile Include="asmjit\core\zonevector.cpp" />
+    <ClCompile Include="asmjit\x86\x86assembler.cpp" />
+    <ClCompile Include="asmjit\x86\x86builder.cpp" />
+    <ClCompile Include="asmjit\x86\x86compiler.cpp" />
+    <ClCompile Include="asmjit\x86\x86emithelper.cpp" />
+    <ClCompile Include="asmjit\x86\x86features.cpp" />
+    <ClCompile Include="asmjit\x86\x86formatter.cpp" />
+    <ClCompile Include="asmjit\x86\x86func.cpp" />
+    <ClCompile Include="asmjit\x86\x86instapi.cpp" />
+    <ClCompile Include="asmjit\x86\x86instdb.cpp" />
+    <ClCompile Include="asmjit\x86\x86operand.cpp" />
+    <ClCompile Include="asmjit\x86\x86rapass.cpp" />
+    <ClCompile Include="AuxFunctions.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Packer.cpp" />
+    <ClCompile Include="ShoggothEngine.cpp" />
     <ClCompile Include="PEParser.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="asmjit\asmjit-scope-begin.h" />
+    <ClInclude Include="asmjit\asmjit-scope-end.h" />
+    <ClInclude Include="asmjit\asmjit.h" />
+    <ClInclude Include="asmjit\core.h" />
+    <ClInclude Include="asmjit\core\api-build_p.h" />
+    <ClInclude Include="asmjit\core\api-config.h" />
+    <ClInclude Include="asmjit\core\archcommons.h" />
+    <ClInclude Include="asmjit\core\archtraits.h" />
+    <ClInclude Include="asmjit\core\assembler.h" />
+    <ClInclude Include="asmjit\core\builder.h" />
+    <ClInclude Include="asmjit\core\codebuffer.h" />
+    <ClInclude Include="asmjit\core\codeholder.h" />
+    <ClInclude Include="asmjit\core\codewriter_p.h" />
+    <ClInclude Include="asmjit\core\compiler.h" />
+    <ClInclude Include="asmjit\core\compilerdefs.h" />
+    <ClInclude Include="asmjit\core\constpool.h" />
+    <ClInclude Include="asmjit\core\cpuinfo.h" />
+    <ClInclude Include="asmjit\core\datatypes.h" />
+    <ClInclude Include="asmjit\core\emithelper_p.h" />
+    <ClInclude Include="asmjit\core\emitter.h" />
+    <ClInclude Include="asmjit\core\emitterutils_p.h" />
+    <ClInclude Include="asmjit\core\environment.h" />
+    <ClInclude Include="asmjit\core\errorhandler.h" />
+    <ClInclude Include="asmjit\core\features.h" />
+    <ClInclude Include="asmjit\core\formatter.h" />
+    <ClInclude Include="asmjit\core\func.h" />
+    <ClInclude Include="asmjit\core\funcargscontext_p.h" />
+    <ClInclude Include="asmjit\core\globals.h" />
+    <ClInclude Include="asmjit\core\inst.h" />
+    <ClInclude Include="asmjit\core\jitallocator.h" />
+    <ClInclude Include="asmjit\core\jitruntime.h" />
+    <ClInclude Include="asmjit\core\logger.h" />
+    <ClInclude Include="asmjit\core\misc_p.h" />
+    <ClInclude Include="asmjit\core\operand.h" />
+    <ClInclude Include="asmjit\core\osutils.h" />
+    <ClInclude Include="asmjit\core\osutils_p.h" />
+    <ClInclude Include="asmjit\core\raassignment_p.h" />
+    <ClInclude Include="asmjit\core\rabuilders_p.h" />
+    <ClInclude Include="asmjit\core\radefs_p.h" />
+    <ClInclude Include="asmjit\core\ralocal_p.h" />
+    <ClInclude Include="asmjit\core\rapass_p.h" />
+    <ClInclude Include="asmjit\core\rastack_p.h" />
+    <ClInclude Include="asmjit\core\string.h" />
+    <ClInclude Include="asmjit\core\support.h" />
+    <ClInclude Include="asmjit\core\target.h" />
+    <ClInclude Include="asmjit\core\type.h" />
+    <ClInclude Include="asmjit\core\virtmem.h" />
+    <ClInclude Include="asmjit\core\zone.h" />
+    <ClInclude Include="asmjit\core\zonehash.h" />
+    <ClInclude Include="asmjit\core\zonelist.h" />
+    <ClInclude Include="asmjit\core\zonestack.h" />
+    <ClInclude Include="asmjit\core\zonestring.h" />
+    <ClInclude Include="asmjit\core\zonetree.h" />
+    <ClInclude Include="asmjit\core\zonevector.h" />
+    <ClInclude Include="asmjit\x86.h" />
+    <ClInclude Include="asmjit\x86\x86archtraits_p.h" />
+    <ClInclude Include="asmjit\x86\x86assembler.h" />
+    <ClInclude Include="asmjit\x86\x86builder.h" />
+    <ClInclude Include="asmjit\x86\x86compiler.h" />
+    <ClInclude Include="asmjit\x86\x86emithelper_p.h" />
+    <ClInclude Include="asmjit\x86\x86emitter.h" />
+    <ClInclude Include="asmjit\x86\x86features.h" />
+    <ClInclude Include="asmjit\x86\x86formatter_p.h" />
+    <ClInclude Include="asmjit\x86\x86func_p.h" />
+    <ClInclude Include="asmjit\x86\x86globals.h" />
+    <ClInclude Include="asmjit\x86\x86instapi_p.h" />
+    <ClInclude Include="asmjit\x86\x86instdb.h" />
+    <ClInclude Include="asmjit\x86\x86instdb_p.h" />
+    <ClInclude Include="asmjit\x86\x86opcode_p.h" />
+    <ClInclude Include="asmjit\x86\x86operand.h" />
+    <ClInclude Include="asmjit\x86\x86rapass_p.h" />
+    <ClInclude Include="AuxFunctions.h" />
     <ClInclude Include="Packer.h" />
+    <ClInclude Include="ShoggothEngine.h" />
     <ClInclude Include="PEParser.h" />
+    <ClInclude Include="Structs.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

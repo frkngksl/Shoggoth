@@ -1,7 +1,7 @@
 #include "PEParser.h"
 
 
-void parseInput(PBYTE baseAddr) {
+void ParseInput(PBYTE baseAddr) {
 	IMAGE_DOS_HEADER* dosHeader = (IMAGE_DOS_HEADER *) baseAddr;
 	if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE) {
 #ifdef DEBUG

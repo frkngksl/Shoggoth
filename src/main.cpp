@@ -2,8 +2,9 @@
 #include<iostream>
 #include<vector>
 #include "PEParser.h"
+#include "ShoggothEngine.h"
 #include "Packer.h"
-#define DEBUG 1
+#include "AuxFunctions.h"
 
 void printHeader() {
 	const char* shoggothHeader = R"(
@@ -21,71 +22,63 @@ void printHeader() {
 }
 
 
-BOOL writeBinary(char* outputFileName, PBYTE fileBuffer, DWORD fileSize) {
-	HANDLE fileHandle = CreateFileA(outputFileName, GENERIC_WRITE, NULL, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (fileHandle == INVALID_HANDLE_VALUE) {
-#ifdef DEBUG
-		std::cout << "CreateFileA Error: " << GetLastError() << std::endl;
-#endif 
-		return FALSE;
-	}
-	BOOL writeResult = WriteFile(fileHandle, fileBuffer,fileSize,NULL, NULL);
-	if (writeResult == FALSE){
-#ifdef DEBUG
-		std::cout << "WriteFile Error: " << GetLastError() << std::endl;
-#endif 
-		return FALSE;
-	}
-	CloseHandle(fileHandle);
-	return TRUE;
-}
-
-PBYTE readBinary(char* fileName,DWORD &fileSize) {
-	PBYTE fileBuffer;
-	HANDLE fileHandle = CreateFileA(fileName, GENERIC_READ, NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (fileHandle == INVALID_HANDLE_VALUE) {
-#ifdef DEBUG
-		std::cout << "CreateFileA Error: " << GetLastError() << std::endl;
-#endif 
-		return NULL;
-	}
-	fileSize = GetFileSize(fileHandle, NULL);
-	if (fileSize == INVALID_FILE_SIZE) {
-#ifdef DEBUG
-		std::cout << "GetFileSize Error: " << GetLastError() << std::endl;
-#endif 
-		return NULL;
-	}
-	fileBuffer = (PBYTE) VirtualAlloc(NULL, fileSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-	if (fileBuffer == NULL) {
-#ifdef DEBUG
-		std::cout << "VirtualAlloc Error: " << GetLastError() << std::endl;
-#endif 
-		return NULL;
-	}
-	if (ReadFile(fileHandle, fileBuffer, fileSize, NULL, NULL) == FALSE) {
-#ifdef DEBUG
-		std::cout << "ReadFile Error: " << GetLastError() << std::endl;
-#endif 
-		return NULL;
-	}
-	CloseHandle(fileHandle);
-	return fileBuffer;
-}
 
 int main(int argc, char *argv[]) {
-	printHeader();
+	
+	int x = sizeof(unsigned long long);
+	//printHeader();
+	char szHelloWorld[] = "Hello world!";
+
+	// create an instance of the polymorphic
+	// engine
+	ShoggothPolyEngine* shoggothEngine = new ShoggothPolyEngine();
+
+	// a pointer to the generated decryption
+	// function will be placed here
+	PBYTE lpcDecryptionProc = NULL;
+
+	// the size of the decryption code (and
+	// its encrypted payload) will go here
+	DWORD dwDecryptionProcSize = 0;
+
+	// encrypt the input data and dynamically
+	// generate a decryption function
+	ERRORCASES errorReturn = shoggothEngine->PolymorphicEncryption(reinterpret_cast<PBYTE>(szHelloWorld), \
+		sizeof(szHelloWorld), \
+		lpcDecryptionProc, \
+		dwDecryptionProcSize);
+
+	// write the generated function to disk
+	FILE* hFile = fopen("polymorphic_code.bin", "wb");
+
+	if (hFile != NULL)
+	{
+		fwrite(lpcDecryptionProc, dwDecryptionProcSize, 1, hFile);
+		fclose(hFile);
+	}
+
+	// cast the function pointer to the right type --> Make area execeutable
+	DecryptionProc lpDecryptionProc = reinterpret_cast<DecryptionProc>(lpcDecryptionProc);
+
+	// the output buffer for the decrypted data
+	char szOutputBuffer[128] = { 0x00 };
+
+	// call the decryption function via its
+	// function pointer
+	DWORD dwOutputSize = lpDecryptionProc(szOutputBuffer);
+
+	
 	if (argc != 3) {
 		std::cout << "[+] Usage: " << argv[0] << " <input exe> <output exe>" << std::endl;
 		return -1;
 	}
 	DWORD fileSize;
-	PBYTE inputFileBuffer = readBinary(argv[1], fileSize);
+	PBYTE inputFileBuffer = ReadBinary(argv[1], fileSize);
 	if (!inputFileBuffer) {
 		std::cout << "[!] Can't read the input exe" << std::endl;
 		return -1;
 	}
-	parseInput(inputFileBuffer);
+	ParseInput(inputFileBuffer);
 	std::cout << "[+] Input file is read" << std::endl;
 	PBYTE outputBuffer = (PBYTE)VirtualAlloc(NULL, fileSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 	if (outputBuffer == NULL) {
@@ -94,9 +87,9 @@ int main(int argc, char *argv[]) {
 #endif 
 		return -1;
 	}
-	fileSizeWithoutOverlay(inputFileBuffer);
-	preparePackedFile(outputBuffer, inputFileBuffer);
-	BOOL result = writeBinary(argv[2], outputBuffer, fileSize);
+	FileSizeWithoutOverlay(inputFileBuffer);
+	PreparePackedFile(outputBuffer, inputFileBuffer);
+	BOOL result = WriteBinary(argv[2], outputBuffer, fileSize);
 	if (result == FALSE) {
 		std::cout << "[!] Can't write the output exe" << std::endl;
 		return -1;

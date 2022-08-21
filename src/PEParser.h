@@ -3,4 +3,4 @@
 #include <winnt.h>
 #include <iostream>
 
-void parseInput(PBYTE baseAddr);
+void ParseInput(PBYTE baseAddr);
