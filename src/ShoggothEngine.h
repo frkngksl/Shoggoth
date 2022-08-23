@@ -15,6 +15,8 @@ public:
     // Generic Start Function
     ERRORCASES PolymorphicEncryption(PBYTE lpInputBuffer, DWORD dwInputBuffer, PBYTE &lpOutputBuffer, DWORD &lpdwOutputSize);
 
+    //Garbage function
+    void GenerateGarbageInstruction();
 private:
     
     // a structure describing the values of the output registers
@@ -48,32 +50,9 @@ private:
 
     } SPE_CRYPT_OP, * P_SPE_CRYPT_OP;
 
-    
-    void MixupArrayOutputRegs(SPE_OUTPUT_REGS* registerArr, WORD size) {
-        SPE_OUTPUT_REGS temp;
-        for (int i = size - 1; i > 0; i--) {
-            int j = rand() % (i + 1);
-            // Swap arr[i] with the element
-            temp = registerArr[i];
-            registerArr[i] = registerArr[j];
-            registerArr[j] = temp;
-        }
-    }
+    CodeHolder asmjitCodeHolder;
 
-    void MixupArrayRegs(x86::Reg* registerArr, WORD size) {
-        x86::Reg temp;
-        for (int i = size - 1; i > 0; i--) {
-            int j = rand() % (i + 1);
-            // Swap arr[i] with the element
-            temp = registerArr[i];
-            registerArr[i] = registerArr[j];
-            registerArr[j] = temp;
-        }
-    }
-
-    CodeHolder code;
-
-    JitRuntime rt;
+    JitRuntime asmjitRuntime;
 
     // buffer with the encryption operations
     void *diCryptOps;
@@ -95,7 +74,7 @@ private:
     unsigned long long dwEncryptionKey;
 
     // AsmJit Assembler instance
-    x86::Assembler* a;
+    x86::Assembler* asmjitAssembler;
 
     // the register which will store a pointer
     // to the data which is to be decrypted
@@ -133,20 +112,25 @@ private:
     // value from the stack
     DWORD dwUnusedCodeSize;
 
+    x86::Gp allRegs[16];
+
+    x86::Gp generalPurposeRegs[14];
+
     // helper methods
     void RandomizeRegisters();
     void GeneratePrologue();
     void GenerateDeltaOffset();
-    void EncryptInputBuffer(PBYTE lpInputBuffer, \
-        DWORD dwInputBuffer, \
-        DWORD dwMinInstr, \
-        DWORD dwMaxInstr);
+    void EncryptInputBuffer(PBYTE lpInputBuffer, DWORD dwInputBuffer, DWORD dwMinInstr, DWORD dwMaxInstr);
     void SetupDecryptionKeys();
     void GenerateDecryption();
-    void SetupOutputRegisters(SPE_OUTPUT_REGS* regOutput, \
-        DWORD dwCount);
+    void SetupOutputRegisters(SPE_OUTPUT_REGS* regOutput, DWORD dwCount);
     void GenerateEpilogue(DWORD dwParamCount);
     void AlignDecryptorBody(DWORD dwAlignment);
     void AppendEncryptedData();
     void UpdateDeltaOffsetAddressing();
+
+    void MixupArrayOutputRegs(SPE_OUTPUT_REGS* registerArr, WORD size);
+    void MixupArrayRegs(x86::Reg* registerArr, WORD size);
+
+    x86::Gp GetRandomRegister();
 };

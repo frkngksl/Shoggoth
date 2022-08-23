@@ -24,7 +24,7 @@ void printHeader() {
 
 
 int main(int argc, char *argv[]) {
-	
+	/*
 	int x = sizeof(unsigned long long);
 	//printHeader();
 	char szHelloWorld[] = "Hello world!";
@@ -66,8 +66,10 @@ int main(int argc, char *argv[]) {
 	// call the decryption function via its
 	// function pointer
 	DWORD dwOutputSize = lpDecryptionProc(szOutputBuffer);
+	*/
 
-	
+	ShoggothPolyEngine* shoggothEngine = new ShoggothPolyEngine();
+	shoggothEngine->GenerateGarbageInstruction();
 	if (argc != 3) {
 		std::cout << "[+] Usage: " << argv[0] << " <input exe> <output exe>" << std::endl;
 		return -1;

@@ -89,3 +89,20 @@ unsigned long RandomizeDWORD() {
 DWORD AlignBytes(DWORD currentSize, DWORD alignment) {
     return (DWORD)(ceil(((float)currentSize) / alignment)) * alignment;
 }
+
+int RandomizeInRange(int min, int max) {
+	return min + (rand() % (max - min + 1));
+}
+
+char *GenerateRandomString(){
+	char * stringBuffer = (char *)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, 17);
+	static const char alphanum[] =
+		"0123456789"
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+	for (int i = 0; i < 16; ++i) {
+		stringBuffer[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
+	}
+	stringBuffer[17] = 0;
+	return stringBuffer;
+}

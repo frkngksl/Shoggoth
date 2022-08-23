@@ -189,7 +189,7 @@
     <ClCompile Include="asmjit\x86\x86operand.cpp" />
     <ClCompile Include="asmjit\x86\x86rapass.cpp" />
     <ClCompile Include="AuxFunctions.cpp" />
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Main.cpp" />
     <ClCompile Include="Packer.cpp" />
     <ClCompile Include="ShoggothEngine.cpp" />
     <ClCompile Include="PEParser.cpp" />
