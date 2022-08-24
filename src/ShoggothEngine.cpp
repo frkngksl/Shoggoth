@@ -826,6 +826,8 @@ void ShoggothPolyEngine::AppendEncryptedData(){
     }
 }
 
+// *****************************************************
+
 void ShoggothPolyEngine::MixupArrayOutputRegs(SPE_OUTPUT_REGS* registerArr, WORD size) {
     SPE_OUTPUT_REGS temp;
     for (int i = size - 1; i > 0; i--) {
@@ -849,225 +851,61 @@ void ShoggothPolyEngine::MixupArrayRegs(x86::Reg* registerArr, WORD size) {
     }
 }
 
+
+void ShoggothPolyEngine::StartAsmjit() {
+    asmjitCodeHolder.init(asmjitRuntime.environment());
+    asmjitAssembler = new x86::Assembler(&asmjitCodeHolder);
+    startOffset = asmjitAssembler->offset();
+}
+
+void ShoggothPolyEngine::ResetAsmjit() {
+    asmjitCodeHolder.reset();
+    startOffset = 0;
+    endOffset = 0;
+}
+
+
+void ShoggothPolyEngine::PushAllRegisters() {
+    this->MixupArrayRegs(this->allRegs, 16);
+    for (int i = 0; i < 16; i++) {
+        asmjitAssembler->push(this->allRegs[i]);
+    }
+}
+
+void ShoggothPolyEngine::PopAllRegisters() {
+    for (int i = 0; i < 16; i++) {
+        asmjitAssembler->pop(this->allRegs[i]);
+    }
+}
+
 x86::Gp ShoggothPolyEngine::GetRandomRegister() {
     this->MixupArrayRegs(this->allRegs, 16);
     return this->allRegs[RandomizeInRange(0, 15)];
 }
 
-void ShoggothPolyEngine::GenerateGarbageInstruction() {
-    x86::Gp randomRegister = this->GetRandomRegister();
-    BYTE randomValue = (BYTE)(RandomizeInRange(0, 255));
+x86::Gp ShoggothPolyEngine::GetRandomGeneralPurposeRegister() {
+    this->MixupArrayRegs(this->generalPurposeRegs, 14);
+    return this->generalPurposeRegs[RandomizeInRange(0, 13)];
+}
+
+
+void ShoggothPolyEngine::StartEncoding(PBYTE input, uint64_t inputSize) {
+    // Start codeholder and assembler
+    this->StartAsmjit();
+    // Push all registers first
+    this->PushAllRegisters();
+    
+    // Get Some Garbage Instructions
+    this->GenerateRandomGarbage();
+
+}
+
+void ShoggothPolyEngine::DebugCurrentCodeBuffer() {
     Func functionPtr;
-    asmjitCodeHolder.init(asmjitRuntime.environment());
-    asmjitAssembler = new x86::Assembler(&asmjitCodeHolder);
-
-    int startOffset = asmjitAssembler->offset();
-    int endOffset = 0;
-    // Nop instruction +
-    asmjitAssembler->nop(); 
-    
-    // Cld instruction - Clear Direction flag in EFLAGS +
-    asmjitAssembler->cld();
-    
-    // CLC instruction - Clear carry flag +
-    asmjitAssembler->clc();
-    
-    // CMC instruction - Complement carry flag +
-    asmjitAssembler->cmc();
-    
-    // fwait instruction - Causes the processor to check for and handle pending, unmasked, floating-point exceptions before proceedin
-    // asmjitAssembler->fwait();
-    // Sikinti
-   
-    // fnop instruction - Performs no FPU operation. +
-    asmjitAssembler->fnop();
-    
-    // fxam instruction - The fxam instruction examines the value in st(0) and reports the results in the condition code bits +
-    asmjitAssembler->fxam();
-    
-    // ftst instruction - The FTST instruction compares the value on the top of stack with zero. +
-    asmjitAssembler->ftst();
-    
-    // jmp 2 - pass the next inst - Sikinti
-    asmjitAssembler->jmp(2);
-    
-    // xor register,0 - nothing changes +
-    asmjitAssembler->xor_(randomRegister, 0);
-    
-    // bt register, register - The CF flag contains the value of the selected bit. +
-    asmjitAssembler->bt(randomRegister, randomRegister);
-    
-    // cmp - compare instruction + 
-    asmjitAssembler->cmp(randomRegister, randomRegister);
-    
-    // mov instruction +
-    asmjitAssembler->mov(randomRegister, randomRegister);
-    
-    // xchg - The XCHG (exchange data) instruction exchanges the contents of two operands.
-    // Sikinti
-    //asmjitAssembler->xchg(randomRegister, randomRegister);
-    
-    // test - bitwise and +
-    asmjitAssembler->test(randomRegister, randomRegister);
-    
-    // cmova - The cmova conditional move if above check the state of CF AND ZF. +
-    asmjitAssembler->cmova(randomRegister, randomRegister);
-    
-    // cmovb - The cmovb conditional move if below check the state of CF. +
-    asmjitAssembler->cmovb(randomRegister, randomRegister);
-    
-    // cmovc - The cmovc conditional move if carry check the state of CF
-    // asmjitAssembler->cmovc(randomRegister, randomRegister);
-    // Sikinti
-    // 
-    // cmove - similar +
-    asmjitAssembler->cmove(randomRegister, randomRegister);
-    
-    // cmovg +
-    asmjitAssembler->cmovg(randomRegister, randomRegister);
-    
-    // cmovl +
-    asmjitAssembler->cmovl(randomRegister, randomRegister);
-    
-    // cmovo +
-    asmjitAssembler->cmovo(randomRegister, randomRegister);
-    
-    // cmovp +
-    asmjitAssembler->cmovp(randomRegister, randomRegister);
-    
-    // cmovs +
-    asmjitAssembler->cmovs(randomRegister, randomRegister);
-    
-    // cmovz
-    // asmjitAssembler->cmovz(randomRegister, randomRegister);
-    // Sikinti
-   
-    // cmovae +
-    asmjitAssembler->cmovae(randomRegister, randomRegister);
-    
-    // cmovge +
-    asmjitAssembler->cmovge(randomRegister, randomRegister);
-    
-    // cmovle +
-    asmjitAssembler->cmovle(randomRegister, randomRegister);
-    
-    // cmovna
-    // asmjitAssembler->cmovna(randomRegister, randomRegister);
-    // Sikinti
-     
-    // cmovnb Sikinti
-    //asmjitAssembler->cmovnb(randomRegister, randomRegister);
-    
-    // cmovnc Sikinti
-    //asmjitAssembler->cmovnc(randomRegister, randomRegister);
-    
-    // cmovne
-    asmjitAssembler->cmovne(randomRegister, randomRegister);
-    
-    // cmovng
-    asmjitAssembler->cmovng(randomRegister, randomRegister);
-    
-    // cmovnl
-    asmjitAssembler->cmovnl(randomRegister, randomRegister);
-    
-    // cmovno
-    asmjitAssembler->cmovno(randomRegister, randomRegister);
-    
-    // cmovnp +
-    asmjitAssembler->cmovnp(randomRegister, randomRegister);
-    
-    // cmovns + 
-    asmjitAssembler->cmovns(randomRegister, randomRegister);
-    
-    // cmovnz Sikinti
-    // asmjitAssembler->cmovnz(randomRegister, randomRegister);
-    
-    // cmovpe Sikinti
-    //asmjitAssembler->cmovpe(randomRegister, randomRegister);
-    
-    // cmovpo Sikinti
-    //asmjitAssembler->cmovpo(randomRegister, randomRegister);
-    
-    // cmovbe +
-    asmjitAssembler->cmovbe(randomRegister, randomRegister);
-    
-    // cmovnae Sikinti
-    // asmjitAssembler->cmovnae(randomRegister, randomRegister);
-    
-    // cmovnbe Sikinti
-    // asmjitAssembler->cmovnbe(randomRegister, randomRegister);
-    
-    // cmovnle Sikinti
-    // asmjitAssembler->cmovnle(randomRegister, randomRegister);
-    
-    // cmovnge Sikinti
-    // asmjitAssembler->cmovnge(randomRegister, randomRegister);
-    
-    // jmp label;garbage;label: +
-    Label randomLabel = asmjitAssembler->newNamedLabel(GenerateRandomString(), 16);
-    asmjitAssembler->jmp(randomLabel);
-    // this->GenerateGarbageInstruction();
-    asmjitAssembler->bind(randomLabel);
-    
-    // not register;garbage;not register +
-    asmjitAssembler->not_(randomRegister);
-    // this->GenerateGarbageInstruction();
-    asmjitAssembler->not_(randomRegister);
-    
-    // neg register;garbage;neg register +
-    asmjitAssembler->neg(randomRegister);
-    // this->GenerateGarbageInstruction();
-    asmjitAssembler->neg(randomRegister);
-    
-    // inc register;garbage;dec register + 
-    asmjitAssembler->inc(randomRegister);
-    // this->GenerateGarbageInstruction();
-    asmjitAssembler->dec(randomRegister);
-    
-    // dec register;garbage;inc register +
-    asmjitAssembler->dec(randomRegister);
-    // this->GenerateGarbageInstruction();
-    asmjitAssembler->inc(randomRegister);
-    
-    // push register;garbage;pop register +
-    asmjitAssembler->push(randomRegister);
-    // this->GenerateGarbageInstruction();
-    asmjitAssembler->pop(randomRegister);
-    
-    // bswap register;garbage;bswap register +
-    asmjitAssembler->bswap(randomRegister);
-    // this->GenerateGarbageInstruction();
-    asmjitAssembler->bswap(randomRegister);
-    
-    // add register,value ;garbage;sub register,value +
-    asmjitAssembler->add(randomRegister,randomValue);
-    // this->GenerateGarbageInstruction();
-    asmjitAssembler->sub(randomRegister, randomValue);
-    
-    // sub register,value ;garbage;add register,value +
-    asmjitAssembler->sub(randomRegister,randomValue);
-    // this->GenerateGarbageInstruction();
-    asmjitAssembler->add(randomRegister,randomValue);
-     
-    // ror register,value ;garbage;rol register,value +
-    asmjitAssembler->ror(randomRegister,randomValue);
-    // this->GenerateGarbageInstruction();
-    asmjitAssembler->rol(randomRegister,randomValue);
-
-    // rol register,value ;garbage;ror register,value +
-    asmjitAssembler->rol(randomRegister,randomValue);
-    // this->GenerateGarbageInstruction();
-    asmjitAssembler->ror(randomRegister,randomValue);
-
-    DWORD dwOutputSize = asmjitCodeHolder.codeSize(); // Might be incorrect
-    printf("%d\n",dwOutputSize);
-    // Correct way of getting size
+    asmjitAssembler->nop();
     endOffset = asmjitAssembler->offset();
-    printf("%d\n", endOffset - startOffset);
-    // assemble the code of the polymorphic function
-    // (this resolves jumps and labels)
     Error err = asmjitRuntime.add(&functionPtr, &asmjitCodeHolder);
-
+    printf("Code Size: %d", endOffset - startOffset);
     FILE* hFile = fopen("garbagetest.bin", "wb");
 
     if (hFile != NULL)
@@ -1075,5 +913,512 @@ void ShoggothPolyEngine::GenerateGarbageInstruction() {
         fwrite(functionPtr, endOffset - startOffset, 1, hFile);
         fclose(hFile);
     }
+    
+    this->ResetAsmjit();
+    this->StartAsmjit();
+    functionPtr();
+}
+
+void ShoggothPolyEngine::GenerateRandomGarbage() {
 
 }
+
+ // Tested
+void ShoggothPolyEngine::GenerateJumpOverRandomData() {
+    size_t randomSize = RandomizeInRange(30, 50);
+    PBYTE randomBytes = GetRandomBytes(randomSize);
+    char* randomString = GenerateRandomString();
+    this->StartAsmjit();
+    Label randomLabelJmp = asmjitAssembler->newNamedLabel(randomString, 16);
+    asmjitAssembler->jmp(randomLabelJmp);
+    asmjitAssembler->embed(randomBytes, randomSize);
+    asmjitAssembler->bind(randomLabelJmp);
+    HeapFree(GetProcessHeap(), NULL, randomBytes);
+    HeapFree(GetProcessHeap(), NULL, randomString);
+    // this->DebugCurrentCodeBuffer();
+}
+
+void ShoggothPolyEngine::GenerateGarbageInstructions() {
+    int randomValue = RandomizeInRange(1, 4);
+    switch (randomValue) {
+        case 1:
+            this->GenerateGarbageFunction();
+            break;
+        case 2:
+            this->GenerateSafeInstruction();
+            break;
+        case 3:
+            this->GenerateReversedInstructions();
+            break;
+        case 4:
+            this->GenerateJumpedInstructions();
+            break;;
+    }
+}
+
+void ShoggothPolyEngine::GenerateGarbageFunction() {
+    BYTE randomByte = (BYTE)RandomizeInRange(1, 255);
+    if (RandomizeBinary() == 0)
+    {
+        asmjitAssembler->push(x86::rbp);
+        asmjitAssembler->mov(x86::rbp, x86::rsp);
+        asmjitAssembler->sub(x86::rsp, randomByte);
+
+    }
+    else {
+        asmjitAssembler->enter(imm(0), imm(0));
+    }
+    this->GenerateGarbageInstructions();
+    if (RandomizeBinary() == 0)
+    {
+        asmjitAssembler->leave();
+    }
+    else
+    {
+        // equivalent to "leave"
+        asmjitAssembler->mov(x86::rsp, x86::rbp);
+        asmjitAssembler->pop(x86::rbp);
+    }
+}
+
+// Generates only one instruction which doesn't have any affect
+void ShoggothPolyEngine::GenerateSafeInstruction() {
+    int randomIndexForSelect = RandomizeInRange(1, 33);
+    x86::Gp randomRegister = this->GetRandomRegister();
+    char* randomString = GenerateRandomString();
+    Label randomLabelJmp = asmjitAssembler->newNamedLabel(randomString, 16);
+
+    switch (randomIndexForSelect) {
+    case 1:
+        // Nop instruction +
+        asmjitAssembler->nop();
+        break;
+    case 2:
+        // Cld instruction - Clear Direction flag in EFLAGS +
+        asmjitAssembler->cld();
+        break;
+    case 3:
+        // CLC instruction - Clear carry flag +
+        asmjitAssembler->clc();
+        break;
+    case 4:
+        // CMC instruction - Complement carry flag +
+        asmjitAssembler->cmc();
+        break;
+    case 5:
+        // fwait instruction - Causes the processor to check for and handle pending, unmasked, floating-point exceptions before proceedin + VSde okey
+        asmjitAssembler->fwait();
+        break;
+    case 6:
+        // fnop instruction - Performs no FPU operation. +
+        asmjitAssembler->fnop();
+        break;
+    case 7:
+        // fxam instruction - The fxam instruction examines the value in st(0) and reports the results in the condition code bits +
+        asmjitAssembler->fxam();
+        break;
+    case 8:
+        // ftst instruction - The FTST instruction compares the value on the top of stack with zero. +
+        asmjitAssembler->ftst();
+        break;
+    case 9:
+        // jmp - pass the next inst
+        asmjitAssembler->jmp(randomLabelJmp);
+        asmjitAssembler->bind(randomLabelJmp);
+        break;
+    case 10:
+        // xor register,0 - nothing changes +
+        asmjitAssembler->xor_(randomRegister, 0);
+        break;
+    case 11:
+        // bt register, register - The CF flag contains the value of the selected bit. +
+        asmjitAssembler->bt(randomRegister, randomRegister);
+        break;
+    case 12:
+        // cmp - compare instruction + 
+        asmjitAssembler->cmp(randomRegister, randomRegister);
+        break;
+    case 13:
+        // mov instruction +
+        asmjitAssembler->mov(randomRegister, randomRegister);
+        break;
+    case 14:
+        // xchg - The XCHG (exchange data) instruction exchanges the contents of two operands. VSde okey
+        asmjitAssembler->xchg(randomRegister, randomRegister);
+        break;
+    case 15:
+        // test - bitwise and +
+        asmjitAssembler->test(randomRegister, randomRegister);
+        break;
+    case 16:
+        // cmova - The cmova conditional move if above check the state of CF AND ZF. +
+        asmjitAssembler->cmova(randomRegister, randomRegister);
+        break;
+    case 17:
+        // cmovb - The cmovb conditional move if below check the state of CF. +
+        asmjitAssembler->cmovb(randomRegister, randomRegister);
+        break;
+    case 18:
+        // cmove - similar +
+        asmjitAssembler->cmove(randomRegister, randomRegister);
+        break;
+    case 19:
+        // cmovg +
+        asmjitAssembler->cmovg(randomRegister, randomRegister);
+        break;
+    case 20:
+        // cmovl +
+        asmjitAssembler->cmovl(randomRegister, randomRegister);
+        break;
+    case 21:
+        // cmovo +
+        asmjitAssembler->cmovo(randomRegister, randomRegister);
+        break;
+    case 22:
+        // cmovp +
+        asmjitAssembler->cmovp(randomRegister, randomRegister);
+        break;
+    case 23:
+        // cmovs +
+        asmjitAssembler->cmovs(randomRegister, randomRegister);
+        break;
+    case 24:
+        // cmovae +
+        asmjitAssembler->cmovae(randomRegister, randomRegister);
+        break;
+    case 25:
+        // cmovge +
+        asmjitAssembler->cmovge(randomRegister, randomRegister);
+        break;
+    case 26:
+        // cmovle +
+        asmjitAssembler->cmovle(randomRegister, randomRegister);
+        break;
+    case 27:
+        // cmovne
+        asmjitAssembler->cmovne(randomRegister, randomRegister);
+        break;
+    case 28:
+        // cmovng
+        asmjitAssembler->cmovng(randomRegister, randomRegister);
+        break;
+    case 29:
+        // cmovnl
+        asmjitAssembler->cmovnl(randomRegister, randomRegister);
+        break;
+    case 30:
+        // cmovno
+        asmjitAssembler->cmovno(randomRegister, randomRegister);
+        break;
+    case 31:
+        // cmovnp +
+        asmjitAssembler->cmovnp(randomRegister, randomRegister);
+        break;
+    case 32:
+        // cmovns + 
+        asmjitAssembler->cmovns(randomRegister, randomRegister);
+        break;
+    case 33:
+        // cmovbe +
+        asmjitAssembler->cmovbe(randomRegister, randomRegister);
+        break;
+    default:
+        ;
+    }
+    HeapFree(GetProcessHeap(), NULL, randomString);
+}
+
+void ShoggothPolyEngine::GenerateReversedInstructions() {
+    int randomIndexForSelect = RandomizeInRange(1, 10);
+    x86::Gp randomRegister = this->GetRandomRegister();
+    BYTE randomValue = (BYTE)(RandomizeInRange(0, 255));
+    switch (randomIndexForSelect) {
+    case 1:
+        // not register;garbage;not register +
+        asmjitAssembler->not_(randomRegister);
+        this->GenerateGarbageInstructions();
+        asmjitAssembler->not_(randomRegister);
+        break;
+    case 2:
+        // neg register;garbage;neg register +
+        asmjitAssembler->neg(randomRegister);
+        this->GenerateGarbageInstructions();
+        asmjitAssembler->neg(randomRegister);
+        break;
+    case 3:
+        // inc register;garbage;dec register + 
+        asmjitAssembler->inc(randomRegister);
+        this->GenerateGarbageInstructions();
+        asmjitAssembler->dec(randomRegister);
+        break;
+    case 4:
+        // dec register;garbage;inc register +
+        asmjitAssembler->dec(randomRegister);
+        this->GenerateGarbageInstructions();
+        asmjitAssembler->inc(randomRegister);
+        break;
+    case 5:
+        // push register;garbage;pop register +
+        asmjitAssembler->push(randomRegister);
+        this->GenerateGarbageInstructions();
+        asmjitAssembler->pop(randomRegister);
+        break;
+    case 6:
+        // bswap register;garbage;bswap register +
+        asmjitAssembler->bswap(randomRegister);
+        this->GenerateGarbageInstructions();
+        asmjitAssembler->bswap(randomRegister);
+        break;
+    case 7:
+        // add register,value ;garbage;sub register,value +
+        asmjitAssembler->add(randomRegister, randomValue);
+        this->GenerateGarbageInstructions();
+        asmjitAssembler->sub(randomRegister, randomValue);
+        break;
+    case 8:
+        // sub register,value ;garbage;add register,value +
+        asmjitAssembler->sub(randomRegister, randomValue);
+        this->GenerateGarbageInstructions();
+        asmjitAssembler->add(randomRegister, randomValue);
+        break;
+    case 9:
+        // ror register,value ;garbage;rol register,value +
+        asmjitAssembler->ror(randomRegister, randomValue);
+        this->GenerateGarbageInstructions();
+        asmjitAssembler->rol(randomRegister, randomValue);
+        break;
+    case 10:
+        // rol register,value ;garbage;ror register,value +
+        asmjitAssembler->rol(randomRegister, randomValue);
+        this->GenerateGarbageInstructions();
+        asmjitAssembler->ror(randomRegister, randomValue);
+        break;
+    default:
+        break;
+    }
+}
+
+void ShoggothPolyEngine::GenerateJumpedInstructions() {
+    int randomIndexForSelect = RandomizeInRange(1, 16);
+    x86::Gp randomRegister = this->GetRandomRegister();
+    char* randomString = GenerateRandomString();
+    Label randomLabelJmp = asmjitAssembler->newNamedLabel(randomString, 16);
+    switch (randomIndexForSelect) {
+        case 1:
+            // jmp label;garbage;label: +
+            asmjitAssembler->jmp(randomLabelJmp);
+            this->GenerateGarbageInstructions();
+            asmjitAssembler->bind(randomLabelJmp);
+            break;
+        case 2:
+            asmjitAssembler->jae(randomLabelJmp);
+            this->GenerateGarbageInstructions();
+            asmjitAssembler->bind(randomLabelJmp);
+            break;
+        case 3:
+            asmjitAssembler->ja(randomLabelJmp);
+            this->GenerateGarbageInstructions();
+            asmjitAssembler->bind(randomLabelJmp);
+            break;
+        case 4:
+            asmjitAssembler->jbe(randomLabelJmp);
+            this->GenerateGarbageInstructions();
+            asmjitAssembler->bind(randomLabelJmp);
+            break;
+        case 5:
+            asmjitAssembler->jb(randomLabelJmp);
+            this->GenerateGarbageInstructions();
+            asmjitAssembler->bind(randomLabelJmp);
+            break;
+        case 6:
+            asmjitAssembler->je(randomLabelJmp);
+            this->GenerateGarbageInstructions();
+            asmjitAssembler->bind(randomLabelJmp);
+            break;
+        case 7:
+            asmjitAssembler->jge(randomLabelJmp);
+            this->GenerateGarbageInstructions();
+            asmjitAssembler->bind(randomLabelJmp);
+            break;
+        case 8:
+            asmjitAssembler->jg(randomLabelJmp);
+            this->GenerateGarbageInstructions();
+            asmjitAssembler->bind(randomLabelJmp);
+            break;
+        case 9:
+            asmjitAssembler->jle(randomLabelJmp);
+            this->GenerateGarbageInstructions();
+            asmjitAssembler->bind(randomLabelJmp);
+            break;
+        case 10:
+            asmjitAssembler->jl(randomLabelJmp);
+            this->GenerateGarbageInstructions();
+            asmjitAssembler->bind(randomLabelJmp);
+            break;
+        case 11:
+            asmjitAssembler->jne(randomLabelJmp);
+            this->GenerateGarbageInstructions();
+            asmjitAssembler->bind(randomLabelJmp);
+            break;
+        case 12:
+            asmjitAssembler->jnp(randomLabelJmp);
+            this->GenerateGarbageInstructions();
+            asmjitAssembler->bind(randomLabelJmp);
+            break;
+        case 13:
+            asmjitAssembler->jns(randomLabelJmp);
+            this->GenerateGarbageInstructions();
+            asmjitAssembler->bind(randomLabelJmp);
+            break;
+        case 14:
+            asmjitAssembler->jo(randomLabelJmp);
+            this->GenerateGarbageInstructions();
+            asmjitAssembler->bind(randomLabelJmp);
+            break;
+        case 15:
+            asmjitAssembler->jp(randomLabelJmp);
+            this->GenerateGarbageInstructions();
+            asmjitAssembler->bind(randomLabelJmp);
+            break;
+        case 16:
+            asmjitAssembler->js(randomLabelJmp);
+            this->GenerateGarbageInstructions();
+            asmjitAssembler->bind(randomLabelJmp);
+            break;
+        default:
+            break;
+    }
+}
+
+void ShoggothPolyEngine::RandomUnsafeGarbage() {
+    x86::Gp randomGeneralPurposeRegisterDest = this->GetRandomGeneralPurposeRegister();
+    x86::Gp randomGeneralPurposeRegisterSource = this->GetRandomGeneralPurposeRegister();
+    int randomIndexForSelect = RandomizeInRange(1, 16);
+    asmjitAssembler->push(randomGeneralPurposeRegisterDest);
+    BYTE randomValue = (BYTE)(RandomizeInRange(0, 255));
+    //TODO : ADD memory examples, 
+    switch (randomIndexForSelect) {
+    case 1:
+        asmjitAssembler->add(randomGeneralPurposeRegisterDest, randomValue);
+        break;
+    case 2:
+        asmjitAssembler->sub(randomGeneralPurposeRegisterDest, randomValue);
+        break;
+    case 3:
+        asmjitAssembler->xor_(randomGeneralPurposeRegisterDest, randomValue);
+        break;
+    case 4:
+        asmjitAssembler->shl(randomGeneralPurposeRegisterDest, randomValue);
+        break;
+    case 5:
+        asmjitAssembler->shr(randomGeneralPurposeRegisterDest, randomValue);
+        break;
+    default:
+        break;
+    }
+    asmjitAssembler->pop(randomGeneralPurposeRegisterDest);
+}
+
+/*    
+    // Errored instructions because of asmjit
+    
+    // cmovc - The cmovc conditional move if carry check the state of CF
+    // asmjitAssembler->cmovc(randomRegister, randomRegister); // Sikinti VSde de
+    
+    // cmovz
+    // asmjitAssembler->cmovz(randomRegister, randomRegister); // Sikinti VSde de
+    
+    // cmovna
+    // asmjitAssembler->cmovna(randomRegister, randomRegister); // Sikinti VSde de
+     
+    // cmovnb 
+    // asmjitAssembler->cmovnb(randomRegister, randomRegister); // Sikinti VSde de
+    
+    // cmovnc 
+    // asmjitAssembler->cmovnc(randomRegister, randomRegister); // Sikinti VSde de
+    
+    // cmovnz 
+    // asmjitAssembler->cmovnz(randomRegister, randomRegister); // Sikinti VSde de
+    
+    // cmovpe 
+    // asmjitAssembler->cmovpe(randomRegister, randomRegister); // Sikinti VSde de
+    
+    // cmovpo 
+    // asmjitAssembler->cmovpo(randomRegister, randomRegister); // Sikinti VSde de
+    
+    // cmovnae 
+    // asmjitAssembler->cmovnae(randomRegister, randomRegister); // Sikinti VSde de
+    
+    // cmovnbe 
+    // asmjitAssembler->cmovnbe(randomRegister, randomRegister); // Sikinti VSde de
+    
+    // cmovnle Sikinti
+    // asmjitAssembler->cmovnle(randomRegister, randomRegister); // Sikinti VSde de
+    
+    // cmovnge Sikinti
+    // asmjitAssembler->cmovnge(randomRegister, randomRegister); // Sikinti VSde de
+
+    // jc SIKINTI
+        asmjitAssembler->jc(randomLabelJmp);
+        this->GenerateGarbageInstruction();
+        asmjitAssembler->bind(randomLabelJmp);
+    // jnae SIKINTI
+        asmjitAssembler->jnae(randomLabelJmp);
+        this->GenerateGarbageInstruction();
+        asmjitAssembler->bind(randomLabelJmp);
+
+    // jnbe SIKINTI
+        asmjitAssembler->jnbe(randomLabelJmp);
+        this->GenerateGarbageInstruction();
+        asmjitAssembler->bind(randomLabelJmp);
+
+    // jnb SIKINTI
+        asmjitAssembler->jnb(randomLabelJmp);
+        this->GenerateGarbageInstruction();
+        asmjitAssembler->bind(randomLabelJmp);
+
+    // jnc SIKINTI
+        asmjitAssembler->jnc(randomLabelJmp);
+        this->GenerateGarbageInstruction();
+        asmjitAssembler->bind(randomLabelJmp);
+
+    // jnge SIKINTI
+        asmjitAssembler->jnge(randomLabelJmp);
+        this->GenerateGarbageInstruction();
+        asmjitAssembler->bind(randomLabelJmp);
+
+    // jng SIKINTI
+        asmjitAssembler->jng(randomLabelJmp);
+        this->GenerateGarbageInstruction();
+        asmjitAssembler->bind(randomLabelJmp);
+
+    // jnle SIKINTI
+        asmjitAssembler->jnle(randomLabelJmp);
+        this->GenerateGarbageInstruction();
+        asmjitAssembler->bind(randomLabelJmp);
+
+    // jnl SIKINTI
+        asmjitAssembler->jnl(randomLabelJmp);
+        this->GenerateGarbageInstruction();
+        asmjitAssembler->bind(randomLabelJmp);
+
+    // jnz SIKINTI
+        asmjitAssembler->jnz(randomLabelJmp);
+        this->GenerateGarbageInstruction();
+        asmjitAssembler->bind(randomLabelJmp);
+
+    // jpe SIKINTI
+        asmjitAssembler->jpe(randomLabelJmp);
+        this->GenerateGarbageInstruction();
+        asmjitAssembler->bind(randomLabelJmp);
+
+    // jpo SIKINTI
+        asmjitAssembler->jpo(randomLabelJmp);
+        this->GenerateGarbageInstruction();
+        asmjitAssembler->bind(randomLabelJmp);
+
+    // jz SIKINTI
+        asmjitAssembler->jz(randomLabelJmp);
+        this->GenerateGarbageInstruction();
+        asmjitAssembler->bind(randomLabelJmp);
+*/

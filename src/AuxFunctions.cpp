@@ -52,6 +52,13 @@ PBYTE ReadBinary(char* fileName, DWORD& fileSize) {
 	return fileBuffer;
 }
 
+PBYTE GetRandomBytes(size_t numberOfBytes) {
+	PBYTE returnValue = (PBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, numberOfBytes);
+	for (int i = 0; i < numberOfBytes; i++) {
+		returnValue[i] = rand() % 256;
+	}
+	return returnValue;
+}
 
 bool RandomizeBool() {
     int randVal = rand() % 2;

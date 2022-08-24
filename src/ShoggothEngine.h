@@ -15,8 +15,9 @@ public:
     // Generic Start Function
     ERRORCASES PolymorphicEncryption(PBYTE lpInputBuffer, DWORD dwInputBuffer, PBYTE &lpOutputBuffer, DWORD &lpdwOutputSize);
 
-    //Garbage function
-    void GenerateGarbageInstruction();
+    void StartEncoding(PBYTE input, uint64_t inputSize);
+
+    void GenerateJumpOverRandomData();
 private:
     
     // a structure describing the values of the output registers
@@ -112,6 +113,9 @@ private:
     // value from the stack
     DWORD dwUnusedCodeSize;
 
+    int startOffset = 0;
+    int endOffset = 0;
+
     x86::Gp allRegs[16];
 
     x86::Gp generalPurposeRegs[14];
@@ -129,8 +133,31 @@ private:
     void AppendEncryptedData();
     void UpdateDeltaOffsetAddressing();
 
+    // -----
     void MixupArrayOutputRegs(SPE_OUTPUT_REGS* registerArr, WORD size);
     void MixupArrayRegs(x86::Reg* registerArr, WORD size);
 
+    void PushAllRegisters();
+    void PopAllRegisters();
+
     x86::Gp GetRandomRegister();
+    x86::Gp GetRandomGeneralPurposeRegister();
+
+    void DebugCurrentCodeBuffer();
+
+    void StartAsmjit();
+    void ResetAsmjit();
+
+    void GenerateRandomGarbage();
+
+    void GenerateGarbageInstructions();
+
+    void GenerateGarbageFunction();
+    void GenerateSafeInstruction();
+    void GenerateReversedInstructions();
+    void GenerateJumpedInstructions();
+    
+
+    void RandomUnsafeGarbage();
+    
 };
