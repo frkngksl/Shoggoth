@@ -13,6 +13,7 @@ ShoggothPolyEngine::ShoggothPolyEngine():
     generalPurposeRegs { x86::rax, x86::rbx, x86::rcx, x86::rdx, x86::rsi, x86::rdi, x86::r8,x86::r9,x86::r10,x86::r11,x86::r12,x86::r13,x86::r14,x86::r15 }
     {
     srand(time(NULL));
+    this->StartAsmjit();
     // allRegs = { x86::rax, x86::rbx, x86::rcx, x86::rdx, x86::rsi, x86::rdi, x86::rsp, x86::rbp, x86::r8,x86::r9,x86::r10,x86::r11,x86::r12,x86::r13,x86::r14,x86::r15 };
     // generalPurposeReg = { x86::rax, x86::rbx, x86::rcx, x86::rdx, x86::rsi, x86::rdi, x86::r8,x86::r9,x86::r10,x86::r11,x86::r12,x86::r13,x86::r14,x86::r15 };
 }
@@ -851,6 +852,18 @@ void ShoggothPolyEngine::MixupArrayRegs(x86::Reg* registerArr, WORD size) {
     }
 }
 
+PBYTE ShoggothPolyEngine::AssembleCodeHolder(int &codeSize) {
+    Func functionPtr;
+    PBYTE returnValue;
+    endOffset = asmjitAssembler->offset();
+    codeSize = endOffset - startOffset;
+    Error err = asmjitRuntime.add(&functionPtr, &asmjitCodeHolder);
+    // returnValue = (PBYTE) HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, codeSize);
+    // memcpy(returnValue, functionPtr, codeSize);
+    this->ResetAsmjit();
+    return (PBYTE)functionPtr;
+}
+
 
 void ShoggothPolyEngine::StartAsmjit() {
     asmjitCodeHolder.init(asmjitRuntime.environment());
@@ -862,6 +875,7 @@ void ShoggothPolyEngine::ResetAsmjit() {
     asmjitCodeHolder.reset();
     startOffset = 0;
     endOffset = 0;
+    this->StartAsmjit();
 }
 
 
@@ -919,8 +933,36 @@ void ShoggothPolyEngine::DebugCurrentCodeBuffer() {
     functionPtr();
 }
 
-void ShoggothPolyEngine::GenerateRandomGarbage() {
-
+PBYTE ShoggothPolyEngine::GenerateRandomGarbage() {
+    PBYTE garbageInstructions;
+    PBYTE jmpOverRandomByte;
+    Func garbageInstTest;
+    Func jmpOverRandomByteTest;
+    int codeSizeGarbage = 0;
+    int codeSizeJmpOver = 0;
+    PBYTE returnValue = NULL;
+    // Get garbage instructions
+    this->GenerateGarbageInstructions();
+    garbageInstructions = this->AssembleCodeHolder(codeSizeGarbage);
+    // garbageInstTest = (Func)garbageInstructions;
+    // VirtualProtect(garbageInstructions, codeSizeGarbage, PAGE_EXECUTE_READWRITE, NULL);
+    // garbageInstTest();
+    // Generate jmp over random byte
+    this->GenerateJumpOverRandomData();
+    jmpOverRandomByte = this->AssembleCodeHolder(codeSizeJmpOver);
+    // jmpOverRandomByteTest = (Func)jmpOverRandomByte;
+    // VirtualProtect(jmpOverRandomByteTest, codeSizeGarbage, PAGE_EXECUTE_READWRITE, NULL);
+    // jmpOverRandomByteTest();
+    returnValue = (PBYTE) HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, codeSizeGarbage + codeSizeJmpOver);
+    if (RandomizeBinary()) {
+        memcpy(returnValue, garbageInstructions, codeSizeGarbage);
+        memcpy(returnValue + codeSizeGarbage, jmpOverRandomByte, codeSizeJmpOver);
+    }
+    else {
+        memcpy(returnValue, jmpOverRandomByte, codeSizeJmpOver);
+        memcpy(returnValue + codeSizeJmpOver, garbageInstructions, codeSizeGarbage);
+    }
+    return returnValue;
 }
 
  // Tested
@@ -928,7 +970,6 @@ void ShoggothPolyEngine::GenerateJumpOverRandomData() {
     size_t randomSize = RandomizeInRange(30, 50);
     PBYTE randomBytes = GetRandomBytes(randomSize);
     char* randomString = GenerateRandomString();
-    this->StartAsmjit();
     Label randomLabelJmp = asmjitAssembler->newNamedLabel(randomString, 16);
     asmjitAssembler->jmp(randomLabelJmp);
     asmjitAssembler->embed(randomBytes, randomSize);
@@ -952,7 +993,9 @@ void ShoggothPolyEngine::GenerateGarbageInstructions() {
             break;
         case 4:
             this->GenerateJumpedInstructions();
-            break;;
+            break;
+        default:
+            break;
     }
 }
 

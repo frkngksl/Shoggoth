@@ -16,8 +16,7 @@ public:
     ERRORCASES PolymorphicEncryption(PBYTE lpInputBuffer, DWORD dwInputBuffer, PBYTE &lpOutputBuffer, DWORD &lpdwOutputSize);
 
     void StartEncoding(PBYTE input, uint64_t inputSize);
-
-    void GenerateJumpOverRandomData();
+    PBYTE GenerateRandomGarbage();
 private:
     
     // a structure describing the values of the output registers
@@ -148,7 +147,7 @@ private:
     void StartAsmjit();
     void ResetAsmjit();
 
-    void GenerateRandomGarbage();
+    void GenerateJumpOverRandomData();
 
     void GenerateGarbageInstructions();
 
@@ -157,6 +156,7 @@ private:
     void GenerateReversedInstructions();
     void GenerateJumpedInstructions();
     
+    PBYTE AssembleCodeHolder(int& codeSize);
 
     void RandomUnsafeGarbage();
     

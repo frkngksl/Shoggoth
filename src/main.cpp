@@ -69,8 +69,8 @@ int main(int argc, char *argv[]) {
 	*/
 
 	ShoggothPolyEngine* shoggothEngine = new ShoggothPolyEngine();
-	// shoggothEngine->GenerateGarbageInstruction();
-	shoggothEngine->GenerateJumpOverRandomData();
+	shoggothEngine->GenerateRandomGarbage();
+	//shoggothEngine->GenerateJumpOverRandomData();
 	if (argc != 3) {
 		std::cout << "[+] Usage: " << argv[0] << " <input exe> <output exe>" << std::endl;
 		return -1;
