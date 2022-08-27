@@ -68,9 +68,19 @@ int main(int argc, char *argv[]) {
 	DWORD dwOutputSize = lpDecryptionProc(szOutputBuffer);
 	*/
 
-	ShoggothPolyEngine* shoggothEngine = new ShoggothPolyEngine();
-	shoggothEngine->GenerateRandomGarbage();
-	//shoggothEngine->GenerateJumpOverRandomData();
+	
+	/*
+	PBYTE garbage = shoggothEngine->GenerateRandomGarbage(garbageSize);
+
+	FILE* hFile = fopen("polymorphic_code.bin", "wb");
+
+	if (hFile != NULL)
+	{
+		fwrite(garbage, garbageSize, 1, hFile);
+		fclose(hFile);
+	}
+	*/
+	
 	if (argc != 3) {
 		std::cout << "[+] Usage: " << argv[0] << " <input exe> <output exe>" << std::endl;
 		return -1;
@@ -81,6 +91,8 @@ int main(int argc, char *argv[]) {
 		std::cout << "[!] Can't read the input exe" << std::endl;
 		return -1;
 	}
+	ShoggothPolyEngine* shoggothEngine = new ShoggothPolyEngine();
+	shoggothEngine->StartEncoding(inputFileBuffer, fileSize);
 	ParseInput(inputFileBuffer);
 	std::cout << "[+] Input file is read" << std::endl;
 	PBYTE outputBuffer = (PBYTE)VirtualAlloc(NULL, fileSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
