@@ -60,14 +60,15 @@ PBYTE GetRandomBytes(size_t numberOfBytes) {
 	return returnValue;
 }
 
+BYTE GetRandomByte() {
+	return rand() % 256;
+}
+
 bool RandomizeBool() {
     int randVal = rand() % 2;
     return randVal == 1;
 }
 
-long RandomizeBinary() {
-    return rand()%2;
-}
 unsigned long long RandomizeQWORD() {
     BYTE b0, b1, b2, b3, b4, b5, b6, b7;
     b0 = rand() % 256;

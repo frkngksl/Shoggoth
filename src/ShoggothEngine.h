@@ -12,7 +12,8 @@ public:
     ShoggothPolyEngine();
 
     void StartEncoding(PBYTE input, uint64_t inputSize);
-    
+
+    PBYTE SecondDecryptor(int payloadSize, int& secondDecryptorSize);
 private:
     
     CodeHolder asmjitCodeHolder;
@@ -27,6 +28,12 @@ private:
     x86::Gp allRegs[16];
 
     x86::Gp generalPurposeRegs[14];
+
+    ENCRYPT_TYPE *encryptListForBlocks;
+
+    uint64_t numberOfBlocks;
+
+    x86::Gp addressHolderForSecondEncryption;
 
     // -----
     void MixupArrayRegs(x86::Reg* registerArr, WORD size);
@@ -61,7 +68,11 @@ private:
     PBYTE FirstDecryptor(int payloadSize, int& firstDecryptorSize);
 
     PBYTE SecondEncryption(PBYTE plainPayload, int payloadSize, int& newPayloadSize);
-    PBYTE SecondDecryptor(int payloadSize, int& secondDecryptorSize);
 
-    
+    PBYTE GetCallInstructionOverPayload(int payloadSize, int &callSize);
+    PBYTE GetPopInstructionAfterPayload(int& popSize);
+
+    void GetRandomSecondEncryption(ENCRYPT_TYPE* encryptTypeHolder);
+    PBYTE GenerateDecryptorStub(int& decryptorStubSize, int offsetToEncryptedPayload);
+    void ApplyRandomSecondEncryption(uint64_t* blockCursor, ENCRYPT_TYPE* encryptTypeHolder);
 };

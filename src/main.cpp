@@ -1,6 +1,7 @@
 ﻿#include<Windows.h>
 #include<iostream>
 #include<vector>
+#include <iostream>
 #include "PEParser.h"
 #include "ShoggothEngine.h"
 #include "Packer.h"
@@ -80,7 +81,10 @@ int main(int argc, char *argv[]) {
 		fclose(hFile);
 	}
 	*/
-	
+	int payloadSize = 150;
+	int test = 0;
+	ShoggothPolyEngine* shoggothEngine = new ShoggothPolyEngine();
+	shoggothEngine->SecondDecryptor(payloadSize, test);
 	if (argc != 3) {
 		std::cout << "[+] Usage: " << argv[0] << " <input exe> <output exe>" << std::endl;
 		return -1;
@@ -91,7 +95,7 @@ int main(int argc, char *argv[]) {
 		std::cout << "[!] Can't read the input exe" << std::endl;
 		return -1;
 	}
-	ShoggothPolyEngine* shoggothEngine = new ShoggothPolyEngine();
+	
 	shoggothEngine->StartEncoding(inputFileBuffer, fileSize);
 	ParseInput(inputFileBuffer);
 	std::cout << "[+] Input file is read" << std::endl;

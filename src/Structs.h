@@ -1,16 +1,28 @@
 #pragma once
+#include "asmjit/asmjit.h"
 enum ERRORCASES { ERR_PARAMS, ERR_MEMORY, ERR_SUCCESS};
 typedef long(WINAPI *DecryptionProc)(void*);
 
 
-enum
+typedef enum
 {
-    SPE_CRYPT_OP_ADD = 0,
-    SPE_CRYPT_OP_SUB,
-    SPE_CRYPT_OP_XOR,
-    SPE_CRYPT_OP_NOT,
-    SPE_CRYPT_OP_NEG,
-};
+    ADD_OPERATION_FOR_CRYPT = 0,
+    SUB_OPERATION_FOR_CRYPT,
+    XOR_OPERATION_FOR_CRYPT,
+    NOT_OPERATION_FOR_CRYPT,
+    NEG_OPERATION_FOR_CRYPT,
+    INC_OPERATION_FOR_CRYPT,
+    DEC_OPERATION_FOR_CRYPT,
+    ROL_OPERATION_FOR_CRYPT,
+    ROR_OPERATION_FOR_CRYPT,
+} OPERATIONS;
+
+typedef struct {
+    OPERATIONS operation;
+    uint64_t operandValue;
+    asmjit::x86::Gp operandRegister;
+    bool isRegister;
+} ENCRYPT_TYPE;
 
 
 
