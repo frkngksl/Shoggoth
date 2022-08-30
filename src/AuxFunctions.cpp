@@ -79,7 +79,7 @@ unsigned long long RandomizeQWORD() {
     b5 = rand() % 256;
     b6 = rand() % 256;
     b7 = rand() % 256;
-    unsigned long long dw = b7 << 56 | b6 << 48 | b5 << 40 | b4 << 32 | b3 << 24 | b2 << 16 | b1 << 8 | b0;
+    uint64_t dw = (uint64_t)b7 << 56 | (uint64_t)b6 << 48 | (uint64_t)b5 << 40 | (uint64_t) b4 << 32 | b3 << 24 | b2 << 16 | b1 << 8 | b0;
 	return dw;
 }
 

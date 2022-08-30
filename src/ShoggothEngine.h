@@ -13,7 +13,8 @@ public:
 
     void StartEncoding(PBYTE input, uint64_t inputSize);
 
-    PBYTE SecondDecryptor(int payloadSize, int& secondDecryptorSize);
+    PBYTE SecondDecryptor(PBYTE encryptedPayload, int payloadSize, int& secondDecryptorBlockSize);
+    PBYTE SecondEncryption(PBYTE plainPayload, int payloadSize, int& newPayloadSize);
 private:
     
     CodeHolder asmjitCodeHolder;
@@ -67,10 +68,9 @@ private:
     PBYTE FirstEncryption(PBYTE plainPayload, int payloadSize);
     PBYTE FirstDecryptor(int payloadSize, int& firstDecryptorSize);
 
-    PBYTE SecondEncryption(PBYTE plainPayload, int payloadSize, int& newPayloadSize);
 
-    PBYTE GetCallInstructionOverPayload(int payloadSize, int &callSize);
     PBYTE GetPopInstructionAfterPayload(int& popSize);
+    PBYTE GetCallInstructionOverPayload(int payloadSize, int& callSize);
 
     void GetRandomSecondEncryption(ENCRYPT_TYPE* encryptTypeHolder);
     PBYTE GenerateDecryptorStub(int& decryptorStubSize, int offsetToEncryptedPayload);
