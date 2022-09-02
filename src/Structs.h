@@ -25,6 +25,12 @@ typedef struct {
 } ENCRYPT_TYPE;
 
 
+typedef struct {
+    uint8_t i;
+    uint8_t j;
+    uint8_t s[256];
+}RC4STATE;
+
 
 typedef struct
 {

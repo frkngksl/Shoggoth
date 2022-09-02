@@ -15,6 +15,9 @@ public:
 
     PBYTE SecondDecryptor(PBYTE encryptedPayload, int payloadSize, int& secondDecryptorBlockSize);
     PBYTE SecondEncryption(PBYTE plainPayload, int payloadSize, int& newPayloadSize);
+    void GenerateRC4Decryptor();
+    void InitRC4State(RC4STATE* state, uint8_t* key, size_t len);
+    void EncryptRC4(RC4STATE* state, uint8_t* msg, size_t len);
 private:
     
     CodeHolder asmjitCodeHolder;
@@ -68,6 +71,7 @@ private:
     PBYTE FirstEncryption(PBYTE plainPayload, int payloadSize);
     PBYTE FirstDecryptor(int payloadSize, int& firstDecryptorSize);
 
+    
 
     PBYTE GetPopInstructionAfterPayload(int& popSize);
     PBYTE GetCallInstructionOverPayload(int payloadSize, int& callSize);
