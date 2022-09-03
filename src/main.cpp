@@ -94,7 +94,11 @@ int main(int argc, char *argv[]) {
 	int newFileSize = 0;
 	int secondDecryptorBlockSize = 0;
 	ShoggothPolyEngine* shoggothEngine = new ShoggothPolyEngine();
-	shoggothEngine->GenerateRC4Decryptor();
+	BYTE msg[] = { 0xB9, 0xF8, 0xAA, 0x5D, 0x3E };
+	BYTE key[] = { 'a','b','c' };
+	int firstDecryptorSize = 0;
+	shoggothEngine->FirstDecryptor(msg, 5, key, 3, firstDecryptorSize);
+	//shoggothEngine->GenerateRC4Decryptor();
 	/*
 	uint8_t key[3] = {'a', 'b', 'c'};
 	uint8_t msg[5] = { 0 };
