@@ -11,14 +11,7 @@ class ShoggothPolyEngine
 public:
     ShoggothPolyEngine();
 
-    void StartEncoding(PBYTE input, uint64_t inputSize);
-
-    PBYTE SecondDecryptor(PBYTE encryptedPayload, int payloadSize, int& secondDecryptorBlockSize);
-    PBYTE SecondEncryption(PBYTE plainPayload, int payloadSize, int& newPayloadSize);
-    PBYTE GenerateRC4Decryptor(PBYTE payload, int payloadSize, RC4STATE* statePtr, int& firstEncryptionStubSize);
-    void InitRC4State(RC4STATE* state, uint8_t* key, size_t len);
-    void EncryptRC4(RC4STATE* state, uint8_t* msg, size_t len);
-    PBYTE FirstDecryptor(PBYTE payload, int payloadSize, PBYTE key, int keySize, int& firstDecryptorSize);
+    PBYTE StartEncoding(PBYTE payload, uint64_t payloadSize, int& encryptedSize);
 private:
     
     CodeHolder asmjitCodeHolder;
@@ -70,13 +63,21 @@ private:
     void RandomUnsafeGarbage();
     
     PBYTE FirstEncryption(PBYTE plainPayload, int payloadSize, PBYTE key, int keySize);
-
+    PBYTE GenerateRC4Decryptor(PBYTE payload, int payloadSize, RC4STATE* statePtr, int& firstEncryptionStubSize);
+    void InitRC4State(RC4STATE* state, uint8_t* key, size_t len);
+    void EncryptRC4(RC4STATE* state, uint8_t* msg, size_t len);
+    PBYTE FirstDecryptor(PBYTE cipheredPayload, int payloadSize, PBYTE key, int keySize, int& firstDecryptorSize);
     
 
     PBYTE GetPopInstructionAfterPayload(int& popSize);
     PBYTE GetCallInstructionOverPayload(int payloadSize, int& callSize);
 
+
+    PBYTE SecondDecryptor(PBYTE encryptedPayload, int payloadSize, int& secondDecryptorBlockSize);
+    PBYTE SecondEncryption(PBYTE plainPayload, int payloadSize, int& newPayloadSize);
     void GetRandomSecondEncryption(ENCRYPT_TYPE* encryptTypeHolder);
     PBYTE GenerateSecondDecryptorStub(int& decryptorStubSize, int offsetToEncryptedPayload);
     void ApplyRandomSecondEncryption(uint64_t* blockCursor, ENCRYPT_TYPE* encryptTypeHolder);
+
+    
 };

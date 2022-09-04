@@ -38,3 +38,4 @@ typedef struct
 	BOOL isUsed;
 } importStruct;
 
+typedef int (*Func)(void);

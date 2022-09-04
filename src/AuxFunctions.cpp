@@ -114,3 +114,10 @@ char *GenerateRandomString(){
 	stringBuffer[17] = 0;
 	return stringBuffer;
 }
+
+PBYTE MergeChunks(PBYTE firstChunk, int firstChunkSize, PBYTE secondChunk, int secondChunkSize) {
+	PBYTE returnValue = (PBYTE) VirtualAlloc(NULL,firstChunkSize + secondChunkSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+	memcpy(returnValue, firstChunk, firstChunkSize);
+	memcpy(returnValue + firstChunkSize, secondChunk, secondChunkSize);
+	return returnValue;
+}

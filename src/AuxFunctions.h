@@ -11,3 +11,4 @@ PBYTE ReadBinary(char* fileName, DWORD& fileSize);
 char* GenerateRandomString();
 PBYTE GetRandomBytes(size_t numberOfBytes);
 BYTE GetRandomByte();
+PBYTE MergeChunks(PBYTE firstChunk, int firstChunkSize, PBYTE secondChunk, int secondChunkSize);

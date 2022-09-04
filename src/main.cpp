@@ -6,6 +6,7 @@
 #include "ShoggothEngine.h"
 #include "Packer.h"
 #include "AuxFunctions.h"
+#include "Structs.h"
 
 void printHeader() {
 	const char* shoggothHeader = R"(
@@ -93,27 +94,14 @@ int main(int argc, char *argv[]) {
 	}
 	int newFileSize = 0;
 	int secondDecryptorBlockSize = 0;
+	PBYTE encryptedPayload = NULL;
+	int encryptedSize = 0;
 	ShoggothPolyEngine* shoggothEngine = new ShoggothPolyEngine();
-	BYTE msg[] = { 0xB9, 0xF8, 0xAA, 0x5D, 0x3E };
-	BYTE key[] = { 'a','b','c' };
-	int firstDecryptorSize = 0;
-	shoggothEngine->FirstDecryptor(msg, 5, key, 3, firstDecryptorSize);
-	//shoggothEngine->GenerateRC4Decryptor();
-	/*
-	uint8_t key[3] = {'a', 'b', 'c'};
-	uint8_t msg[5] = { 0 };
-	msg[0] = 't';
-	msg[1] = 'e';
-	msg[2] = 's';
-	msg[3] = 't';
-	msg[4] = 'f';
-	RC4STATE state = { 0 };
-	shoggothEngine->InitRC4State(&state, key, sizeof(key));
-	shoggothEngine->EncryptRC4(&state, msg, 5);
-	*/
-	//PBYTE encryptedPayload = shoggothEngine->SecondEncryption(inputFileBuffer, fileSize, newFileSize);
-	//PBYTE decryptorStub = shoggothEngine->SecondDecryptor(encryptedPayload, newFileSize, secondDecryptorBlockSize);
-	//shoggothEngine->StartEncoding(inputFileBuffer, fileSize);
+	encryptedPayload = shoggothEngine->StartEncoding(inputFileBuffer, fileSize, encryptedSize);
+	// TEST
+	Func fun = (Func)encryptedPayload;
+	fun();
+
 	ParseInput(inputFileBuffer);
 	std::cout << "[+] Input file is read" << std::endl;
 	PBYTE outputBuffer = (PBYTE)VirtualAlloc(NULL, fileSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);

