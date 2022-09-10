@@ -29,13 +29,12 @@ UINT64 FollowExport(char* ptr_forward, LPCSTR lpProcName) {
     CHAR loadLibraryAString[] = { 'L', 'o', 'a', 'd', 'L', 'i', 'b', 'r', 'a', 'r', 'y', 'A', 0 };
     LOADLIBRARYA loadLibraryAFunc = (LOADLIBRARYA)GetSymbolAddress(kernel32DLL, loadLibraryAString);
 
-    
+
 
     char del[] = { '.', 0x00 };
     char* pos_del = 0x00;
     char forward_dll[MAX_PATH] = { 0 };
     char forward_export[MAX_PATH] = { 0 };
-    unsigned long forward_export_hash = 0x00;
     uint8_t i = 0;
     uint64_t fwd_dll_base = 0x00, forwarded_export = 0x00;
 
@@ -51,7 +50,6 @@ UINT64 FollowExport(char* ptr_forward, LPCSTR lpProcName) {
     while (*pos_del)
         forward_export[i++] = *pos_del++;
 
-    forward_export_hash = XorHash(djb2((unsigned char*)forward_export));
 
     fwd_dll_base = GetLoadedLibrary(XorHash(djb2((unsigned char*)forward_dll)));
     if (fwd_dll_base == 0x00) {
@@ -60,7 +58,7 @@ UINT64 FollowExport(char* ptr_forward, LPCSTR lpProcName) {
             return 0;
     }
 
-    forwarded_export = GetSymbolAddress(fwd_dll_base, lpProcName);
+    forwarded_export = GetSymbolAddress(fwd_dll_base, forward_export);
 
     return forwarded_export;
 
@@ -75,7 +73,7 @@ UINT64 GetSymbolAddress(UINT64 dllAddress, LPCSTR lpProcName) {
     UINT64 exportDirectoryRVA = 0;
     DWORD exportTableSize = 0;
 
-    if (dllAddress == NULL) {
+    if (dllAddress == 0) {
         return 0;
     }
 
@@ -101,7 +99,7 @@ UINT64 GetSymbolAddress(UINT64 dllAddress, LPCSTR lpProcName) {
 
             //Still points to export table
             if (dllAddress + rva >= dllAddress + exportDirectoryRVA && dllAddress + rva <= dllAddress + exportDirectoryRVA + exportTableSize) {
-                // This is a forwarded export 
+                // This is a forwarded export
 
                 // Normally it should be address, but it points to a name
                 char* ptr_forward = (char*)(dllAddress + rva);
@@ -161,17 +159,14 @@ unsigned long djb2(unsigned char* str)
 
 // function to fetch the base address of kernel32.dll from the Process Environment Block
 UINT64 GetLoadedLibrary(unsigned long hash) {
-    ULONG_PTR kernel32dll, val1, val2, val3;
     PLDR_DATA_TABLE_ENTRY cursorLoadedModules,startEntry;
     PUNICODE_STR dllName = NULL;
-    USHORT dllNameLength;
     // Get PEB ptr
     _PPEB PEBPtr = (_PPEB) __readgsqword(0x60);
     // Circular linked list
     cursorLoadedModules = startEntry = (PLDR_DATA_TABLE_ENTRY)(PEBPtr->pLdr->InMemoryOrderModuleList.Flink);
     do {
         dllName = &(cursorLoadedModules->BaseDllName);
-        dllNameLength = cursorLoadedModules->BaseDllName.Length;
 
         if (UnicodeDjb2(ToLower(dllName->pBuffer)) == XorHash(hash)) {
             return (uint64_t)cursorLoadedModules->DllBase;
@@ -180,4 +175,3 @@ UINT64 GetLoadedLibrary(unsigned long hash) {
     } while (cursorLoadedModules && startEntry != cursorLoadedModules);
     return 0;
 }
-

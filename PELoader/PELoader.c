@@ -1,4 +1,3 @@
-#pragma once
 #include "APISolver.h"
 
 typedef struct _BASE_RELOCATION_ENTRY {
@@ -15,7 +14,7 @@ void fixRelocTable(BYTE* loadedAddr, BYTE* preferableAddr, IMAGE_DATA_DIRECTORY*
 	size_t relocBlockOffset = 0;
 	for (; relocBlockOffset < maxSizeOfDir; relocBlockOffset += relocBlockMetadata->SizeOfBlock) {
 		relocBlockMetadata = (IMAGE_BASE_RELOCATION*)(relocBlocks + relocBlockOffset + loadedAddr);
-		if (relocBlockMetadata->VirtualAddress == NULL || relocBlockMetadata->SizeOfBlock == 0) {
+		if (relocBlockMetadata->VirtualAddress == 0 || relocBlockMetadata->SizeOfBlock == 0) {
 			//No more block
 			break;
 		}
@@ -39,10 +38,9 @@ void fixRelocTable(BYTE* loadedAddr, BYTE* preferableAddr, IMAGE_DATA_DIRECTORY*
 
 
 void loadPE(BYTE *baseAddr){
-    UINT64 kernel32DLL, msvcrtDLL, advapi32DLL, shlwapiDLL, ntdllDLL;
+    UINT64 kernel32DLL, msvcrtDLL, ntdllDLL;
     //symbols to dynamically resolve from dll during runtime
-    UINT64 loadLibraryAFunc, closeHandleFunc, openProcessTokenFunc, getCurrentProcessFunc, virtualAllocFunc, getTokenInformationFunc, lookupPrivilegeNameWFunc, memcpyFunc, ntUnmapViewOfSectionFunc, getProcAddressFunc;
-	int returnCode = 0;
+    UINT64 loadLibraryAFunc, virtualAllocFunc, memcpyFunc, ntUnmapViewOfSectionFunc, getProcAddressFunc;
     // kernel32.dll exports
 	// C:\Windows\System32\Kernel32.dll
 	if ((kernel32DLL = GetLoadedLibrary(CRYPTED_HASH_KERNEL32)) == 0) {
@@ -55,21 +53,11 @@ void loadPE(BYTE *baseAddr){
     CHAR loadLibraryAString[] = { 'L', 'o', 'a', 'd', 'L', 'i', 'b', 'r', 'a', 'r', 'y', 'A', 0 };
     loadLibraryAFunc = GetSymbolAddress(kernel32DLL, loadLibraryAString);
 
-	// msvcrt.dll exports
-	CHAR shlwapiString[] = { 's','h','l','w','a','p','i', '.', 'd', 'l', 'l', 0 };
-	shlwapiDLL = (UINT64)((LOADLIBRARYA)loadLibraryAFunc)(shlwapiString);
-
 	CHAR getProcAddressString[] = { 'G', 'e', 't', 'P', 'r', 'o', 'c', 'A', 'd', 'd', 'r', 'e', 's' , 's', 0 };
 	getProcAddressFunc = GetSymbolAddress(kernel32DLL, getProcAddressString);
-	
+
 	CHAR virtualAllocString[] = { 'V', 'i', 'r', 't', 'u', 'a', 'l', 'A', 'l', 'l', 'o', 'c', 0 };
 	virtualAllocFunc = GetSymbolAddress(kernel32DLL, virtualAllocString);
-
-    CHAR getCurrentProcessString[] = { 'G', 'e', 't', 'C', 'u', 'r', 'r', 'e', 'n', 't', 'P', 'r', 'o', 'c', 'e', 's', 's', 0 };
-	getCurrentProcessFunc = GetSymbolAddress(kernel32DLL, getCurrentProcessString);
-
-    CHAR closeHandleString[] = { 'C', 'l', 'o', 's', 'e', 'H', 'a', 'n', 'd', 'l', 'e', 0 };
-	closeHandleFunc = GetSymbolAddress(kernel32DLL, closeHandleString);
 
 	// ntdll.dll exports
 	CHAR ntUnmapViewString[] = { 'N','t','U','n','m','a','p','V','i','e','w','O','f','S','e','c','t','i','o','n',0 };
@@ -91,7 +79,7 @@ void loadPE(BYTE *baseAddr){
 	IMAGE_DATA_DIRECTORY* iatDirectory = &ntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
 	ULONGLONG preferableAddress = ntHeader->OptionalHeader.ImageBase;
 	//Unmap the preferable address
-	returnCode = ((NTUNMAPVIEWOFSECTION)ntUnmapViewOfSectionFunc)((HANDLE)-1, (LPVOID)ntHeader->OptionalHeader.ImageBase);
+	((NTUNMAPVIEWOFSECTION)ntUnmapViewOfSectionFunc)((HANDLE)-1, (LPVOID)ntHeader->OptionalHeader.ImageBase);
 	BYTE* imageBaseForPE = (BYTE*)((VIRTUALALLOC)virtualAllocFunc)((LPVOID)preferableAddress, ntHeader->OptionalHeader.SizeOfImage, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	if (!imageBaseForPE && !relocTable) {
 		//((PRINTF)printfFunc)("[!] No Relocation Table and Cannot load to the preferable address\n");
@@ -109,7 +97,7 @@ void loadPE(BYTE *baseAddr){
 	// SizeOfHeaders indicates how much space in the file is used for representing all the file headers, including the MS - DOS header, PE file header, PE optional header, and PE section headers.The section bodies begin at this location in the file.
 	((MEMCPY) memcpyFunc)(imageBaseForPE, baseAddr, ntHeader->OptionalHeader.SizeOfHeaders);
 	//((PRINTF)printfFunc)("[+] All headers are copied\n");
-	IMAGE_SECTION_HEADER* sectionHeaderCursor = (IMAGE_SECTION_HEADER*)(size_t(ntHeader) + sizeof(IMAGE_NT_HEADERS));
+	IMAGE_SECTION_HEADER* sectionHeaderCursor = (IMAGE_SECTION_HEADER*)(((size_t)ntHeader) + sizeof(IMAGE_NT_HEADERS));
 	for (int i = 0; i < ntHeader->FileHeader.NumberOfSections; i++) {
 		((MEMCPY)memcpyFunc)(imageBaseForPE + sectionHeaderCursor[i].VirtualAddress, baseAddr + sectionHeaderCursor[i].PointerToRawData, sectionHeaderCursor[i].SizeOfRawData);
 	}
@@ -117,8 +105,8 @@ void loadPE(BYTE *baseAddr){
 
 	// IAT FIX
 	//((PRINTF)printfFunc)("[+] IAT Fix starts...\n");
-	
-	if (iatDirectory->VirtualAddress == NULL) {
+
+	if (iatDirectory->VirtualAddress == 0) {
 		//((PRINTF)printfFunc)("[!] Import Table not found\n");
 	}
 	else {
@@ -128,7 +116,7 @@ void loadPE(BYTE *baseAddr){
 		size_t parsedSize = 0;
 		for (; parsedSize < iatSize; parsedSize += sizeof(IMAGE_IMPORT_DESCRIPTOR)) {
 			ITEntryCursor = (IMAGE_IMPORT_DESCRIPTOR*)(iatRVA + (ULONG_PTR)imageBaseForPE + parsedSize);
-			if (ITEntryCursor->OriginalFirstThunk == NULL && ITEntryCursor->FirstThunk == NULL) {
+			if (ITEntryCursor->OriginalFirstThunk == 0 && ITEntryCursor->FirstThunk == 0) {
 				break;
 			}
 			LPSTR dllName = (LPSTR)((ULONGLONG)imageBaseForPE + ITEntryCursor->Name);
@@ -137,27 +125,26 @@ void loadPE(BYTE *baseAddr){
 			size_t firstThunkRVA = ITEntryCursor->FirstThunk;
 			//Name
 			size_t originalFirstThunkRVA = ITEntryCursor->OriginalFirstThunk;
-			if (originalFirstThunkRVA == NULL) {
+			if (originalFirstThunkRVA == 0) {
 				originalFirstThunkRVA = ITEntryCursor->FirstThunk;
 			}
 			size_t cursorFirstThunk = 0;
 			size_t cursorOriginalFirstThunk = 0;
-			while (true) {
+			while (1) {
 				IMAGE_THUNK_DATA* firstThunkData = (IMAGE_THUNK_DATA*)(imageBaseForPE + cursorFirstThunk + firstThunkRVA);
 				IMAGE_THUNK_DATA* originalFirstThunkData = (IMAGE_THUNK_DATA*)(imageBaseForPE + cursorOriginalFirstThunk + originalFirstThunkRVA);
-				if (firstThunkData->u1.Function == NULL) {
+				if (firstThunkData->u1.Function == 0) {
 					//end of the list
 					break;
 				}
 				else if (IMAGE_SNAP_BY_ORDINAL64(originalFirstThunkData->u1.Ordinal)) {
-					unsigned int printOrdinal = originalFirstThunkData->u1.Ordinal & 0xFFFF;
 					//Get_Sym((LOADLIBRARYA)LoadLibraryAFunc)(dllName);
 					size_t functionAddr = (size_t)((GETPROCADDRESS)getProcAddressFunc)(((LOADLIBRARYA)loadLibraryAFunc)(dllName), (char*)(originalFirstThunkData->u1.Ordinal & 0xFFFF)); // Ordinal should be in low word for getProcA
 					//((PRINTF)printfFunc)("[+] Import by ordinal : \n");
 					firstThunkData->u1.Function = (ULONGLONG)functionAddr;
 				}
 				else {
-					PIMAGE_IMPORT_BY_NAME nameOfFunc = (PIMAGE_IMPORT_BY_NAME)(size_t(imageBaseForPE) + originalFirstThunkData->u1.AddressOfData);
+					PIMAGE_IMPORT_BY_NAME nameOfFunc = (PIMAGE_IMPORT_BY_NAME)(((size_t)imageBaseForPE) + originalFirstThunkData->u1.AddressOfData);
 					size_t functionAddr = (size_t)((GETPROCADDRESS)getProcAddressFunc)(((LOADLIBRARYA)loadLibraryAFunc)(dllName), nameOfFunc->Name);
 					firstThunkData->u1.Function = (ULONGLONG)functionAddr;
 				}
@@ -183,14 +170,4 @@ void loadPE(BYTE *baseAddr){
 	// ((PRINTF)printfFunc)("[+] Binary is running\n");
 
 	((void(*)())startAddress)();
-}
-
-
-int main(int arc, char* argv[]) {
-    HANDLE source = CreateFileA(argv[1], GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    DWORD size = GetFileSize(source, NULL);
-    BYTE* buffer =(BYTE *) HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY,size);
-    ReadFile(source, buffer, size, NULL, NULL);
-    loadPE(buffer);
-	return 0;
 }
