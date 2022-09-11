@@ -114,7 +114,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;SOLUTIONDIR=R"($(SolutionDir))";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
@@ -190,9 +190,7 @@
     <ClCompile Include="asmjit\x86\x86rapass.cpp" />
     <ClCompile Include="AuxFunctions.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="Packer.cpp" />
     <ClCompile Include="ShoggothEngine.cpp" />
-    <ClCompile Include="PEParser.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="asmjit\asmjit-scope-begin.h" />
@@ -267,9 +265,7 @@
     <ClInclude Include="asmjit\x86\x86operand.h" />
     <ClInclude Include="asmjit\x86\x86rapass_p.h" />
     <ClInclude Include="AuxFunctions.h" />
-    <ClInclude Include="Packer.h" />
     <ClInclude Include="ShoggothEngine.h" />
-    <ClInclude Include="PEParser.h" />
     <ClInclude Include="Structs.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

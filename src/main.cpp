@@ -2,9 +2,7 @@
 #include<iostream>
 #include<vector>
 #include <iostream>
-#include "PEParser.h"
 #include "ShoggothEngine.h"
-#include "Packer.h"
 #include "AuxFunctions.h"
 #include "Structs.h"
 
@@ -26,101 +24,41 @@ void printHeader() {
 
 
 int main(int argc, char *argv[]) {
-	/*
-	int x = sizeof(unsigned long long);
-	//printHeader();
-	char szHelloWorld[] = "Hello world!";
-
-	// create an instance of the polymorphic
-	// engine
-	ShoggothPolyEngine* shoggothEngine = new ShoggothPolyEngine();
-
-	// a pointer to the generated decryption
-	// function will be placed here
-	PBYTE lpcDecryptionProc = NULL;
-
-	// the size of the decryption code (and
-	// its encrypted payload) will go here
-	DWORD dwDecryptionProcSize = 0;
-
-	// encrypt the input data and dynamically
-	// generate a decryption function
-	ERRORCASES errorReturn = shoggothEngine->PolymorphicEncryption(reinterpret_cast<PBYTE>(szHelloWorld), \
-		sizeof(szHelloWorld), \
-		lpcDecryptionProc, \
-		dwDecryptionProcSize);
-
-	// write the generated function to disk
-	FILE* hFile = fopen("polymorphic_code.bin", "wb");
-
-	if (hFile != NULL)
-	{
-		fwrite(lpcDecryptionProc, dwDecryptionProcSize, 1, hFile);
-		fclose(hFile);
-	}
-
-	// cast the function pointer to the right type --> Make area execeutable
-	DecryptionProc lpDecryptionProc = reinterpret_cast<DecryptionProc>(lpcDecryptionProc);
-
-	// the output buffer for the decrypted data
-	char szOutputBuffer[128] = { 0x00 };
-
-	// call the decryption function via its
-	// function pointer
-	DWORD dwOutputSize = lpDecryptionProc(szOutputBuffer);
-	*/
-
+	bool shellcodeMode = false;
+	int fileSize = 0;
+	int newFileSize = 0;
+	PBYTE inputFileBuffer = NULL;
+	PBYTE encryptedPayload = NULL;
+	ShoggothPolyEngine* shoggothEngine = NULL;
 	
-	/*
-	PBYTE garbage = shoggothEngine->GenerateRandomGarbage(garbageSize);
-
-	FILE* hFile = fopen("polymorphic_code.bin", "wb");
-
-	if (hFile != NULL)
-	{
-		fwrite(garbage, garbageSize, 1, hFile);
-		fclose(hFile);
-	}
-	*/
 	if (argc != 3) {
-		std::cout << "[+] Usage: " << argv[0] << " <input exe> <output exe>" << std::endl;
+		std::cout << "[+] Usage: " << argv[0] << " <input payload> <output name>" << std::endl;
 		return -1;
 	}
-	DWORD fileSize;
-	PBYTE inputFileBuffer = ReadBinary(argv[1], fileSize);
-	if (!inputFileBuffer) {
+	inputFileBuffer = ReadBinary(argv[1], fileSize);
+	if (!inputFileBuffer || !fileSize) {
 		std::cout << "[!] Can't read the input exe" << std::endl;
 		return -1;
 	}
-	int newFileSize = 0;
-	int secondDecryptorBlockSize = 0;
-	PBYTE encryptedPayload = NULL;
-	int encryptedSize = 0;
-	ShoggothPolyEngine* shoggothEngine = new ShoggothPolyEngine();
-	encryptedPayload = shoggothEngine->StartEncoding(inputFileBuffer, fileSize, encryptedSize);
-	// TEST
-	Func fun = (Func)encryptedPayload;
-	fun();
 
-	ParseInput(inputFileBuffer);
-	std::cout << "[+] Input file is read" << std::endl;
-	PBYTE outputBuffer = (PBYTE)VirtualAlloc(NULL, fileSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-	if (outputBuffer == NULL) {
-#ifdef DEBUG
-		std::cout << "VirtualAlloc Error: " << GetLastError() << std::endl;
-#endif 
-		return -1;
+	std::cout << "[+] " << argv[1] << " is read!" << std::endl;
+
+	if (!CheckValidPE(inputFileBuffer)) {
+		std::cout << "[+] Input file is a valid x64 PE! PE encoding is choosing..." << std::endl;
+		shellcodeMode = false;
 	}
-	FileSizeWithoutOverlay(inputFileBuffer);
-	PreparePackedFile(outputBuffer, inputFileBuffer);
-	BOOL result = WriteBinary(argv[2], outputBuffer, fileSize);
-	if (result == FALSE) {
-		std::cout << "[!] Can't write the output exe" << std::endl;
-		return -1;
+	else {
+		std::cout << "[+] Input file is not a valid x64 PE! Shellcode encoding is choosing..." << std::endl;
+		shellcodeMode = true;
 	}
-	std::cout << "[+] Output file is written" << std::endl;
-	VirtualFree(inputFileBuffer,0,MEM_RELEASE);
-	VirtualFree(outputBuffer, 0, MEM_RELEASE);
-	std::cout << "[+] Enjoy your new file: " << argv[2] << std::endl;
+	// Initiate engine
+	shoggothEngine = new ShoggothPolyEngine();
+
+	if (!shellcodeMode) {
+		inputFileBuffer = shoggothEngine->AddReflectiveLoader(inputFileBuffer, fileSize, fileSize);
+	}
+
+	int secondDecryptorBlockSize = 0;
+	int encryptedSize = 0;
 	return 0;
 }

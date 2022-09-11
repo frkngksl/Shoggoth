@@ -6,12 +6,15 @@
 
 using namespace asmjit;
 
+#define BLOCK_SIZE 8
+
 class ShoggothPolyEngine
 {
 public:
     ShoggothPolyEngine();
 
-    PBYTE StartEncoding(PBYTE payload, uint64_t payloadSize, int& encryptedSize);
+    PBYTE StartEncoding(PBYTE payload, int payloadSize, int& encryptedSize);
+    PBYTE AddReflectiveLoader(PBYTE payload, int payloadSize, int& newPayloadSize);
 private:
     
     CodeHolder asmjitCodeHolder;
@@ -71,7 +74,7 @@ private:
 
     PBYTE GetPopInstructionAfterPayload(int& popSize);
     PBYTE GetCallInstructionOverPayload(int payloadSize, int& callSize);
-
+    PBYTE GeneratePopWithGarbage(x86::Gp popReg, int& popStubSize);
 
     PBYTE SecondDecryptor(PBYTE encryptedPayload, int payloadSize, int& secondDecryptorBlockSize);
     PBYTE SecondEncryption(PBYTE plainPayload, int payloadSize, int& newPayloadSize);

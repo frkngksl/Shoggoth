@@ -1,6 +1,6 @@
 #include "AuxFunctions.h"
 
-BOOL WriteBinary(char* outputFileName, PBYTE fileBuffer, DWORD fileSize) {
+BOOL WriteBinary(char* outputFileName, PBYTE fileBuffer, int fileSize) {
 	HANDLE fileHandle = CreateFileA(outputFileName, GENERIC_WRITE, NULL, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (fileHandle == INVALID_HANDLE_VALUE) {
 #ifdef DEBUG
@@ -19,7 +19,7 @@ BOOL WriteBinary(char* outputFileName, PBYTE fileBuffer, DWORD fileSize) {
 	return TRUE;
 }
 
-PBYTE ReadBinary(char* fileName, DWORD& fileSize) {
+PBYTE ReadBinary(char* fileName, int& fileSize) {
 	PBYTE fileBuffer;
 	HANDLE fileHandle = CreateFileA(fileName, GENERIC_READ, NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (fileHandle == INVALID_HANDLE_VALUE) {
@@ -94,8 +94,8 @@ unsigned long RandomizeDWORD() {
     return dw;
 }
 
-DWORD AlignBytes(DWORD currentSize, DWORD alignment) {
-    return (DWORD)(ceil(((float)currentSize) / alignment)) * alignment;
+int AlignBytes(int currentSize, int alignment) {
+    return (int)(ceil(((float)currentSize) / alignment)) * alignment;
 }
 
 int RandomizeInRange(int min, int max) {
@@ -120,4 +120,13 @@ PBYTE MergeChunks(PBYTE firstChunk, int firstChunkSize, PBYTE secondChunk, int s
 	memcpy(returnValue, firstChunk, firstChunkSize);
 	memcpy(returnValue + firstChunkSize, secondChunk, secondChunkSize);
 	return returnValue;
+}
+
+bool CheckValidPE(PBYTE fileBuffer) {
+	PIMAGE_DOS_HEADER testFileDosHeader = (PIMAGE_DOS_HEADER)fileBuffer;
+	PIMAGE_NT_HEADERS testFileNtHeader = (PIMAGE_NT_HEADERS)(testFileDosHeader->e_lfanew + fileBuffer);
+	if (testFileDosHeader->e_magic == IMAGE_DOS_SIGNATURE && testFileNtHeader->Signature == IMAGE_NT_SIGNATURE && testFileNtHeader->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC) {
+		return true;
+	}
+	return false;
 }

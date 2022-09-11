@@ -21,12 +21,6 @@
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PEParser.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Packer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="asmjit\core\archtraits.cpp">
       <Filter>asmjit</Filter>
     </ClCompile>
@@ -179,12 +173,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="PEParser.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Packer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="asmjit\asmjit-scope-begin.h">
       <Filter>asmjit</Filter>
     </ClInclude>
