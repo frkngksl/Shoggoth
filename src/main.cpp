@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
 
 	std::cout << "[+] " << argv[1] << " is read!" << std::endl;
 
-	if (!CheckValidPE(inputFileBuffer)) {
+	if (CheckValidPE(inputFileBuffer)) {
 		std::cout << "[+] Input file is a valid x64 PE! PE encoding is choosing..." << std::endl;
 		shellcodeMode = false;
 	}
@@ -57,6 +57,11 @@ int main(int argc, char *argv[]) {
 	if (!shellcodeMode) {
 		inputFileBuffer = shoggothEngine->AddReflectiveLoader(inputFileBuffer, fileSize, fileSize);
 	}
+
+	inputFileBuffer = shoggothEngine->StartEncoding(inputFileBuffer, fileSize, newFileSize);
+
+	Func test = (Func ) inputFileBuffer;
+	test();
 
 	int secondDecryptorBlockSize = 0;
 	int encryptedSize = 0;

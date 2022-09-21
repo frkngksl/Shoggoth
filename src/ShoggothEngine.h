@@ -73,6 +73,7 @@ private:
     
 
     PBYTE GetPopInstructionAfterPayload(int& popSize);
+
     PBYTE GetCallInstructionOverPayload(int payloadSize, int& callSize);
     PBYTE GeneratePopWithGarbage(x86::Gp popReg, int& popStubSize);
 

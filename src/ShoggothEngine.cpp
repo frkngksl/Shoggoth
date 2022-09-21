@@ -20,11 +20,13 @@ PBYTE ShoggothPolyEngine::AddReflectiveLoader(PBYTE payload, int payloadSize, in
     int payloadWithCallSize = 0;
     int popStubSize = 0;
     int payloadWithCallAndPopSize = 0;
+    int payloadWithLoaderSize = 0;
     char stubFilePath[MAX_PATH] = { 0 };
     PBYTE callStub = NULL;
     PBYTE reflectiveLoader = NULL;
     PBYTE payloadWithCall = NULL;
     PBYTE payloadWithCallAndPop = NULL;
+    PBYTE payloadWithLoader = NULL;
     PBYTE popStub = NULL;
     // If you want to use another stub, you should change this hardcoded string
     snprintf(stubFilePath, MAX_PATH, "%s..\\stub\\PELoader.bin", SOLUTIONDIR);
@@ -32,6 +34,7 @@ PBYTE ShoggothPolyEngine::AddReflectiveLoader(PBYTE payload, int payloadSize, in
     if (reflectiveLoader == NULL || reflectiveLoaderSize == 0) {
         return NULL;
     }
+
     // Put a call to get payload address
     callStub = this->GetCallInstructionOverPayload(payloadSize, callStubSize);
     if (callStub == NULL || callStubSize == 0) {
@@ -39,22 +42,25 @@ PBYTE ShoggothPolyEngine::AddReflectiveLoader(PBYTE payload, int payloadSize, in
         return NULL;
     }
     payloadWithCall = MergeChunks(callStub, callStubSize, payload, payloadSize);
+    // VirtualFree(payload, 0, MEM_RELEASE);
+    // VirtualFree(callStub, 0, MEM_RELEASE);
     payloadWithCallSize = payloadSize + callStubSize;
     // Since input PE address is in stack now, we can create a garbage and pop it.
     popStub = this->GeneratePopWithGarbage(x86::rcx,popStubSize);
     
     payloadWithCallAndPop = MergeChunks(payloadWithCall, payloadWithCallSize, popStub, popStubSize);
+    // VirtualFree(popStub, 0, MEM_RELEASE);
+    // VirtualFree(payloadWithCall, 0, MEM_RELEASE);
+
     payloadWithCallAndPopSize = payloadWithCallSize + popStubSize;
 
-    newPayloadSize = payloadWithCallAndPopSize;
+    payloadWithLoader = MergeChunks(payloadWithCallAndPop, payloadWithCallAndPopSize, reflectiveLoader, reflectiveLoaderSize);
+    payloadWithLoaderSize = payloadWithCallAndPopSize + reflectiveLoaderSize;
+    // VirtualFree(payloadWithCallAndPop, 0, MEM_RELEASE);
+    // VirtualFree(reflectiveLoader, 0, MEM_RELEASE);
+    newPayloadSize = payloadWithLoaderSize;
 
-    VirtualFree(payload, 0, MEM_RELEASE);
-    VirtualFree(reflectiveLoader, 0, MEM_RELEASE);
-    VirtualFree(callStub, 0, MEM_RELEASE);
-    VirtualFree(payloadWithCall, 0, MEM_RELEASE);
-    VirtualFree(popStub, 0, MEM_RELEASE);
-
-    return payloadWithCallAndPop;
+    return payloadWithLoader;
 }
 
 
@@ -65,12 +71,12 @@ PBYTE  ShoggothPolyEngine::GeneratePopWithGarbage(x86::Gp popReg, int& popStubSi
     int garbageSize = 0;
     int popSize = 0;
     garbageInstructions = this->GenerateRandomGarbage(garbageSize);
-    asmjitAssembler->pop(popReg);
+    asmjitAssembler->pop(x86::rcx);
     popPtr = this->AssembleCodeHolder(popSize);
     returnValue = MergeChunks(garbageInstructions, garbageSize, popPtr, popSize);
     popStubSize = garbageSize + popSize;
-    VirtualFree(garbageInstructions, 0, MEM_RELEASE);
-    VirtualFree(popPtr, 0, MEM_RELEASE);
+    // VirtualFree(garbageInstructions, 0, MEM_RELEASE);
+    // VirtualFree(popPtr, 0, MEM_RELEASE);
     return returnValue;
 }
 
@@ -174,20 +180,22 @@ PBYTE ShoggothPolyEngine::StartEncoding(PBYTE payload, int payloadSize, int &enc
     firstGarbageWithPayloadSize = payloadSize + firstGarbageSize;
 
     firstGarbageWithPayload = MergeChunks(firstGarbage, firstGarbageSize, payload, payloadSize);
-    VirtualFree(payload, 0, MEM_RELEASE);
-    VirtualFree(firstGarbage, 0, MEM_RELEASE);
+    // VirtualFree(payload, 0, MEM_RELEASE);
+    // VirtualFree(firstGarbage, 0, MEM_RELEASE);
 
-    
    
     firstEncryptedPayload = this->FirstEncryption(firstGarbageWithPayload, firstGarbageWithPayloadSize, firstEncryptionKey, firstKeySize);
     firstEncryptedPayloadSize = firstGarbageWithPayloadSize;
 
     firstDecryptorAndEncryptedPayload = this->FirstDecryptor(firstEncryptedPayload, firstEncryptedPayloadSize, firstEncryptionKey, firstKeySize, firstDecryptorAndEncryptedPayloadSize);
+    //firstDecryptorAndEncryptedPayloadSize = firstGarbageWithPayloadSize;
     
+
     secondEncryptedPayload = this->SecondEncryption(firstDecryptorAndEncryptedPayload, firstDecryptorAndEncryptedPayloadSize, secondEncryptedSize);
     
     secondDecryptorAndEncryptedPayload = this->SecondDecryptor(secondEncryptedPayload, secondEncryptedSize, secondDecryptorAndEncryptedPayloadSize);
-    
+    // Func test = (Func)secondDecryptorAndEncryptedPayload;
+    // test();
     // this->PopAllRegisters();
     encryptedSize = secondDecryptorAndEncryptedPayloadSize;
     return secondDecryptorAndEncryptedPayload;
@@ -436,8 +444,8 @@ PBYTE ShoggothPolyEngine::GenerateRC4Decryptor(PBYTE payload, int payloadSize, R
     codePtr = this->AssembleCodeHolder(RC4DecryptorSize);
     this->DebugBuffer(codePtr, RC4DecryptorSize);
     returnPtr = MergeChunks(codePtr, RC4DecryptorSize, payload, payloadSize);
-    VirtualFree(codePtr, 0, MEM_RELEASE);
-    VirtualFree(payload, 0, MEM_RELEASE);
+    // VirtualFree(codePtr, 0, MEM_RELEASE);
+    // VirtualFree(payload, 0, MEM_RELEASE);
 
     //Func test = (Func)returnPtr;
     //test();
@@ -469,7 +477,7 @@ PBYTE ShoggothPolyEngine::SecondEncryption(PBYTE plainPayload, int payloadSize, 
         this->ApplyRandomSecondEncryption(blockCursor, &(this->encryptListForBlocks[i]));
         blockCursor++;
     }
-    VirtualFree(plainPayload, 0, MEM_RELEASE);
+    // VirtualFree(plainPayload, 0, MEM_RELEASE);
     return encryptedArea;
 }
 
@@ -499,9 +507,9 @@ PBYTE ShoggothPolyEngine::SecondDecryptor(PBYTE encryptedPayload,int payloadSize
     secondDecryptorBlockSize += popStubSize;
     memcpy(returnPtr + secondDecryptorBlockSize, decryptorStub, decryptorStubSize);
     secondDecryptorBlockSize += decryptorStubSize;
-    VirtualFree(callStub, 0, MEM_RELEASE);
-    VirtualFree(popStub, 0, MEM_RELEASE);
-    VirtualFree(decryptorStub, 0, MEM_RELEASE);
+    // VirtualFree(callStub, 0, MEM_RELEASE);
+    // VirtualFree(popStub, 0, MEM_RELEASE);
+    // VirtualFree(decryptorStub, 0, MEM_RELEASE);
     return returnPtr;
 }
 
@@ -599,6 +607,7 @@ PBYTE ShoggothPolyEngine::GenerateSecondDecryptorStub(int& decryptorStubSize, in
 }
 
 PBYTE ShoggothPolyEngine::GetCallInstructionOverPayload(int payloadSize,int &callSize) {
+    this->asmjitCodeHolder.flatten();
     this->asmjitCodeHolder.relocateToBase(0x00);
     asmjitAssembler->call(payloadSize + 5);
     return this->AssembleCodeHolder(callSize);
@@ -729,8 +738,8 @@ PBYTE ShoggothPolyEngine::GenerateRandomGarbage(int &garbageSize) {
         returnValue = MergeChunks(garbageInstructions, codeSizeGarbage, jmpOverRandomByte, codeSizeJmpOver);
     }
     garbageSize = codeSizeJmpOver + codeSizeGarbage;
-    VirtualFree(jmpOverRandomByte, 0, MEM_RELEASE);
-    VirtualFree(garbageInstructions, 0, MEM_RELEASE);
+    // VirtualFree(jmpOverRandomByte, 0, MEM_RELEASE);
+    // VirtualFree(garbageInstructions, 0, MEM_RELEASE);
     return returnValue;
 }
 
