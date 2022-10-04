@@ -13,3 +13,4 @@ PBYTE GetRandomBytes(size_t numberOfBytes);
 BYTE GetRandomByte();
 PBYTE MergeChunks(PBYTE firstChunk, int firstChunkSize, PBYTE secondChunk, int secondChunkSize);
 bool CheckValidPE(PBYTE fileBuffer);
+bool Checkx64PE(PBYTE fileBuffer);

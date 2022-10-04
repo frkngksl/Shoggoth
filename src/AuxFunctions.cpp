@@ -21,6 +21,7 @@ BOOL WriteBinary(char* outputFileName, PBYTE fileBuffer, int fileSize) {
 
 PBYTE ReadBinary(char* fileName, int& fileSize) {
 	PBYTE fileBuffer;
+	// Get a file handle
 	HANDLE fileHandle = CreateFileA(fileName, GENERIC_READ, NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (fileHandle == INVALID_HANDLE_VALUE) {
 #ifdef DEBUG
@@ -28,6 +29,7 @@ PBYTE ReadBinary(char* fileName, int& fileSize) {
 #endif 
 		return NULL;
 	}
+	// Get size of that file
 	fileSize = GetFileSize(fileHandle, NULL);
 	if (fileSize == INVALID_FILE_SIZE) {
 #ifdef DEBUG
@@ -35,6 +37,7 @@ PBYTE ReadBinary(char* fileName, int& fileSize) {
 #endif 
 		return NULL;
 	}
+	// Allocate a data buffer
 	fileBuffer = (PBYTE)VirtualAlloc(NULL, fileSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 	if (fileBuffer == NULL) {
 #ifdef DEBUG
@@ -42,6 +45,7 @@ PBYTE ReadBinary(char* fileName, int& fileSize) {
 #endif 
 		return NULL;
 	}
+	// Read the file and put into the buffer
 	if (ReadFile(fileHandle, fileBuffer, fileSize, NULL, NULL) == FALSE) {
 #ifdef DEBUG
 		std::cout << "ReadFile Error: " << GetLastError() << std::endl;
@@ -49,6 +53,7 @@ PBYTE ReadBinary(char* fileName, int& fileSize) {
 		return NULL;
 	}
 	CloseHandle(fileHandle);
+	// Return the buffer
 	return fileBuffer;
 }
 
@@ -116,16 +121,36 @@ char *GenerateRandomString(){
 }
 
 PBYTE MergeChunks(PBYTE firstChunk, int firstChunkSize, PBYTE secondChunk, int secondChunkSize) {
-	PBYTE returnValue = (PBYTE) VirtualAlloc(NULL,firstChunkSize + secondChunkSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+	PBYTE returnValue = (PBYTE) VirtualAlloc(NULL,firstChunkSize + secondChunkSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	memcpy(returnValue, firstChunk, firstChunkSize);
 	memcpy(returnValue + firstChunkSize, secondChunk, secondChunkSize);
 	return returnValue;
 }
 
 bool CheckValidPE(PBYTE fileBuffer) {
+	try {
+		// Get DOS Header
+		PIMAGE_DOS_HEADER testFileDosHeader = (PIMAGE_DOS_HEADER)fileBuffer;
+		// Get NT Header
+		PIMAGE_NT_HEADERS testFileNtHeader = (PIMAGE_NT_HEADERS)(testFileDosHeader->e_lfanew + fileBuffer);
+		// Check DOS Signature and NT Signature.
+		if (testFileDosHeader->e_magic == IMAGE_DOS_SIGNATURE && testFileNtHeader->Signature == IMAGE_NT_SIGNATURE) {
+			return true;
+		}
+		return false;
+	}
+	catch(...){
+		return false;
+	}
+}
+
+bool Checkx64PE(PBYTE fileBuffer) {
+	// Get DOS Header
 	PIMAGE_DOS_HEADER testFileDosHeader = (PIMAGE_DOS_HEADER)fileBuffer;
+	// Get NT Header
 	PIMAGE_NT_HEADERS testFileNtHeader = (PIMAGE_NT_HEADERS)(testFileDosHeader->e_lfanew + fileBuffer);
-	if (testFileDosHeader->e_magic == IMAGE_DOS_SIGNATURE && testFileNtHeader->Signature == IMAGE_NT_SIGNATURE && testFileNtHeader->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC) {
+	// Check the architecture.
+	if (testFileNtHeader->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC) {
 		return true;
 	}
 	return false;

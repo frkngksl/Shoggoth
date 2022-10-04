@@ -25,45 +25,64 @@ void printHeader() {
 
 int main(int argc, char *argv[]) {
 	bool shellcodeMode = false;
-	int fileSize = 0;
-	int newFileSize = 0;
+	int inputSize = 0;
+	int encryptedPayloadSize = 0;
 	PBYTE inputFileBuffer = NULL;
 	PBYTE encryptedPayload = NULL;
+	// Polymorphic Engine Object
 	ShoggothPolyEngine* shoggothEngine = NULL;
 	
 	if (argc != 3) {
 		std::cout << "[+] Usage: " << argv[0] << " <input payload> <output name>" << std::endl;
 		return -1;
 	}
-	inputFileBuffer = ReadBinary(argv[1], fileSize);
-	if (!inputFileBuffer || !fileSize) {
+	// Read the input binary
+	inputFileBuffer = ReadBinary(argv[1], inputSize);
+	if (!inputFileBuffer || !inputSize) {
 		std::cout << "[!] Can't read the input exe" << std::endl;
 		return -1;
 	}
 
 	std::cout << "[+] " << argv[1] << " is read!" << std::endl;
-
+	// Check the input file is a PE file or not
 	if (CheckValidPE(inputFileBuffer)) {
-		std::cout << "[+] Input file is a valid x64 PE! PE encoding is choosing..." << std::endl;
-		shellcodeMode = false;
+		// Check it is x64 or not
+		if (Checkx64PE(inputFileBuffer)) {
+			std::cout << "[+] Input file is a valid x64 PE! PE encoding is choosing..." << std::endl;
+			shellcodeMode = false;
+		}
+		else {
+			std::cout << "[!] x86 PE is detected! Shoggoth doesn't support x86 PE yet!" << std::endl;
+			return -1;
+		}
+		
 	}
+	// Since it is not a PE according to PE signatures, we can 
 	else {
-		std::cout << "[+] Input file is not a valid x64 PE! Shellcode encoding is choosing..." << std::endl;
+		std::cout << "[+] Input file is not a x64 PE! Shellcode encoding is choosing..." << std::endl;
 		shellcodeMode = true;
 	}
-	// Initiate engine
-	shoggothEngine = new ShoggothPolyEngine();
+	// Initiate the engine
+	shoggothEngine = new ShoggothPolyEngine(shellcodeMode);
 
 	if (!shellcodeMode) {
-		inputFileBuffer = shoggothEngine->AddReflectiveLoader(inputFileBuffer, fileSize, fileSize);
+		// If our input file is a PE, append reflective loader
+		inputFileBuffer = shoggothEngine->AddReflectiveLoader(inputFileBuffer, inputSize, inputSize);
+		std::cout << "[+] Reflective loader payload is added!" << std::endl;
 	}
+	// Start Encryption Process
+	encryptedPayload = shoggothEngine->StartPolymorphicEncrypt(inputFileBuffer, inputSize, encryptedPayloadSize);
+	std::cout << "[+] Polymorphic encryption is done!" << std::endl;
 
-	inputFileBuffer = shoggothEngine->StartEncoding(inputFileBuffer, fileSize, newFileSize);
+	// Write output
+	if (WriteBinary(argv[2], encryptedPayload, encryptedPayloadSize)) {
+		std::cout << "Encrypted payload is saved as " << argv[2] << std::endl;
+	}
+	else {
+		std::cout << "[!] Error on writing to " << argv[2] << std::endl;
+	}
+	 Func test = (Func ) encryptedPayload;
+	 test();
 
-	Func test = (Func ) inputFileBuffer;
-	test();
-
-	int secondDecryptorBlockSize = 0;
-	int encryptedSize = 0;
 	return 0;
 }
