@@ -1,0 +1,38 @@
+CC := x86_64-w64-mingw32-gcc
+LD := x86_64-w64-mingw32-ld
+CFLAGS := -Wall -m64 -fno-builtin -ffunction-sections -fno-asynchronous-unwind-tables -nostdlib -fno-ident -O2
+CCLDFLAGS := -Wl -Tlinker.ld --no-seh -DC2
+
+S_SRCS := alignStack.asm
+C_SRCS := APISolver.c COFFLoader.c BeaconFunctions.c
+OBJS := $(patsubst %.asm,%.o,$(S_SRCS)) $(patsubst %.c,%.o,$(C_SRCS))
+
+all: bin/COFFLoader.exe bin/COFFLoader.bin
+
+bin/COFFLoader.exe: $(OBJS)
+	mkdir -p $(@D)
+	$(LD) -s $^ -o $@
+
+bin/COFFLoader.bin: bin/COFFLoader.exe
+	objcopy -j .text -O binary $< $@
+
+%.o: %.asm
+	nasm -f win64 $< -o $@
+
+%.o: src/%.c
+	$(CC) $< $(CFLAGS) -c -o $@ $(CCLDFLAGS)
+
+clean:
+	rm -rf $(OBJS) \
+		bin/COFFLoader.exe bin/COFFLoader.bin bin/
+
+
+
+		make:
+			nasm -f win64 alignStack.asm -o alignStack.o
+			x86_64-w64-mingw32-gcc -Wall -m64 -fno-builtin -ffunction-sections -fno-asynchronous-unwind-tables -nostdlib -fno-ident -O2 -Wl,-Tlinker.ld,--no-seh -DC2 -c -o APISolver.o APISolver.c
+			x86_64-w64-mingw32-gcc -Wall -m64 -fno-builtin -ffunction-sections -fno-asynchronous-unwind-tables -nostdlib -fno-ident -O2 -Wl,-Tlinker.ld,--no-seh -DC2 -c -o COFFLoader.o COFFLoader.c
+			x86_64-w64-mingw32-gcc -Wall -m64 -fno-builtin -ffunction-sections -fno-asynchronous-unwind-tables -nostdlib -fno-ident -O2 -Wl,-Tlinker.ld,--no-seh -DC2 -c -o BeaconFunctions.o BeaconFunctions.c
+			mkdir -p bin
+			x86_64-w64-mingw32-ld -s alignStack.o BeaconFunctions.o APISolver.o COFFLoader.o  -o bin/COFFLoader.exe
+			objcopy -j .text -O binary bin/COFFLoader.exe bin/COFFLoader.bin

