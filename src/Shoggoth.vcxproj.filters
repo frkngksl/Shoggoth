@@ -21,12 +21,6 @@
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PEParser.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Packer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="asmjit\core\archtraits.cpp">
       <Filter>asmjit</Filter>
     </ClCompile>
@@ -177,14 +171,14 @@
     <ClCompile Include="ShoggothEngine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="FirstEncryption.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SecondEncryption.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="PEParser.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Packer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="asmjit\asmjit-scope-begin.h">
       <Filter>asmjit</Filter>
     </ClInclude>
@@ -405,6 +399,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ShoggothEngine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="FirstEncryption.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SecondEncryption.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

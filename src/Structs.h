@@ -1,7 +1,5 @@
 #pragma once
 #include "asmjit/asmjit.h"
-enum ERRORCASES { ERR_PARAMS, ERR_MEMORY, ERR_SUCCESS};
-typedef long(WINAPI *DecryptionProc)(void*);
 
 
 typedef enum

@@ -5,7 +5,7 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>C:\Users\picus\Desktop\notepadShellcode.bin test.exe</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>C:\Users\picus\Desktop\Shoggoth\src\x64\Release\mimikatz.exe test.exe</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>

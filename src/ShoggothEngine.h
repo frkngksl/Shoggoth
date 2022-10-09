@@ -1,19 +1,23 @@
 #pragma once
-#include<Windows.h>
+#include <Windows.h>
+#include <time.h>
 #include "asmjit/asmjit.h"
-#include<time.h>
 #include "Structs.h"
 
 using namespace asmjit;
 
+#define BLOCK_SIZE 8
+
 class ShoggothPolyEngine
 {
 public:
-    ShoggothPolyEngine();
+    ShoggothPolyEngine(bool shellcodeMode);
 
-    PBYTE StartEncoding(PBYTE payload, uint64_t payloadSize, int& encryptedSize);
+    PBYTE StartPolymorphicEncrypt(PBYTE payload, int payloadSize, int& encryptedSize);
+    PBYTE AddReflectiveLoader(PBYTE payload, int payloadSize, int& newPayloadSize);
 private:
-    
+    bool shellcodeMode;
+
     CodeHolder asmjitCodeHolder;
 
     JitRuntime asmjitRuntime;
@@ -36,8 +40,8 @@ private:
     // -----
     void MixupArrayRegs(x86::Reg* registerArr, WORD size);
 
-    void PushAllRegisters();
-    void PopAllRegisters();
+    PBYTE PushAllRegisters(int& codeSize);
+    PBYTE PopAllRegisters(int& codeSize);
 
     x86::Gp GetRandomRegister();
     x86::Gp GetRandomGeneralPurposeRegister();
@@ -66,12 +70,13 @@ private:
     PBYTE GenerateRC4Decryptor(PBYTE payload, int payloadSize, RC4STATE* statePtr, int& firstEncryptionStubSize);
     void InitRC4State(RC4STATE* state, uint8_t* key, size_t len);
     void EncryptRC4(RC4STATE* state, uint8_t* msg, size_t len);
-    PBYTE FirstDecryptor(PBYTE cipheredPayload, int payloadSize, PBYTE key, int keySize, int& firstDecryptorSize);
+    PBYTE FirstDecryptor(PBYTE cipheredPayload, int cipheredPayloadSize, PBYTE key, int keySize, int& firstDecryptorSize);
     
 
     PBYTE GetPopInstructionAfterPayload(int& popSize);
-    PBYTE GetCallInstructionOverPayload(int payloadSize, int& callSize);
 
+    PBYTE GetCallInstructionOverPayload(int payloadSize, int& callSize);
+    PBYTE GeneratePopWithGarbage(x86::Gp popReg, int& popStubSize);
 
     PBYTE SecondDecryptor(PBYTE encryptedPayload, int payloadSize, int& secondDecryptorBlockSize);
     PBYTE SecondEncryption(PBYTE plainPayload, int payloadSize, int& newPayloadSize);
