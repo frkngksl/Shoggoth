@@ -38,7 +38,7 @@ PBYTE ReadBinary(char* fileName, int& fileSize) {
 		return NULL;
 	}
 	// Allocate a data buffer
-	fileBuffer = (PBYTE)VirtualAlloc(NULL, fileSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+	fileBuffer = (PBYTE)VirtualAlloc(NULL, fileSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	if (fileBuffer == NULL) {
 #ifdef DEBUG
 		std::cout << "VirtualAlloc Error: " << GetLastError() << std::endl;

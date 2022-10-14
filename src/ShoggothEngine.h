@@ -11,10 +11,11 @@ using namespace asmjit;
 class ShoggothPolyEngine
 {
 public:
-    ShoggothPolyEngine(bool shellcodeMode);
+    ShoggothPolyEngine(bool shellcodeMode, bool coffMode);
 
     PBYTE StartPolymorphicEncrypt(PBYTE payload, int payloadSize, int& encryptedSize);
     PBYTE AddReflectiveLoader(PBYTE payload, int payloadSize, int& newPayloadSize);
+    PBYTE AddCOFFLoader(PBYTE payload, int payloadSize, PBYTE arguments, int argumentSize, int& newPayloadSize);
 private:
     bool shellcodeMode;
 
@@ -76,7 +77,10 @@ private:
     PBYTE GetPopInstructionAfterPayload(int& popSize);
 
     PBYTE GetCallInstructionOverPayload(int payloadSize, int& callSize);
+    PBYTE GetCallInstructionOverPayloadAndArguments(int payloadSize, int argumentSize, int& callSize);
+
     PBYTE GeneratePopWithGarbage(x86::Gp popReg, int& popStubSize);
+    PBYTE GenerateThreePopWithGarbage(x86::Gp payloadReg, x86::Gp argumentReg, x86::Gp argumentSizeReg, int argumentSize, int& popStubSize);
 
     PBYTE SecondDecryptor(PBYTE encryptedPayload, int payloadSize, int& secondDecryptorBlockSize);
     PBYTE SecondEncryption(PBYTE plainPayload, int payloadSize, int& newPayloadSize);
