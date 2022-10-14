@@ -6,7 +6,7 @@
 
 
 
-typedef void(* COFFSIGNATURE)(char*, unsigned long);
+typedef void(* COFFSIGNATURE)(PCHAR, UINT32);
 
 UINT32 Read32le(const PUINT8 p)
 {
@@ -126,7 +126,7 @@ uint64_t GetNumberOfExternalFunctions(PBYTE fileBuffer, PSECTION_HEADER textSect
     return returnValue * sizeof(PBYTE);
 }
 
-void RunCOFF(PBYTE fileBuffer, PBYTE argumentBuffer, unsigned long argumentLength) {
+void RunCOFF(PBYTE fileBuffer, PCHAR argumentBuffer, UINT32 argumentLength) {
     UINT64 kernel32DLL, msvcrtDLL;
     UINT64 loadLibraryAFunc, virtualAllocFunc, strncmpFunc, strlenFunc, printfFunc;
     PBYTE allocatedMemory = NULL;
@@ -331,7 +331,7 @@ void RunCOFF(PBYTE fileBuffer, PBYTE argumentBuffer, unsigned long argumentLengt
     }
     COFFSIGNATURE func = (COFFSIGNATURE)entryAddress;
     SetFileSharingAddress(NULL, 0, 0,1);
-    func((char *)argumentBuffer, argumentLength);
+    func(argumentBuffer, argumentLength);
     LPCSTR coffOutput = BeaconGetOutputData(NULL);
     if (coffOutput != NULL) {
         CHAR formatSpecifier[] = {'%','s', 0x00};
