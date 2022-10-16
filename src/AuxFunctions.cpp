@@ -3,16 +3,12 @@
 BOOL WriteBinary(char* outputFileName, PBYTE fileBuffer, int fileSize) {
 	HANDLE fileHandle = CreateFileA(outputFileName, GENERIC_WRITE, NULL, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (fileHandle == INVALID_HANDLE_VALUE) {
-#ifdef DEBUG
 		std::cout << "CreateFileA Error: " << GetLastError() << std::endl;
-#endif 
 		return FALSE;
 	}
 	BOOL writeResult = WriteFile(fileHandle, fileBuffer, fileSize, NULL, NULL);
 	if (writeResult == FALSE) {
-#ifdef DEBUG
 		std::cout << "WriteFile Error: " << GetLastError() << std::endl;
-#endif 
 		return FALSE;
 	}
 	CloseHandle(fileHandle);
@@ -24,32 +20,24 @@ PBYTE ReadBinary(char* fileName, int& fileSize) {
 	// Get a file handle
 	HANDLE fileHandle = CreateFileA(fileName, GENERIC_READ, NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (fileHandle == INVALID_HANDLE_VALUE) {
-#ifdef DEBUG
 		std::cout << "CreateFileA Error: " << GetLastError() << std::endl;
-#endif 
 		return NULL;
 	}
 	// Get size of that file
 	fileSize = GetFileSize(fileHandle, NULL);
 	if (fileSize == INVALID_FILE_SIZE) {
-#ifdef DEBUG
 		std::cout << "GetFileSize Error: " << GetLastError() << std::endl;
-#endif 
 		return NULL;
 	}
 	// Allocate a data buffer
 	fileBuffer = (PBYTE)VirtualAlloc(NULL, fileSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	if (fileBuffer == NULL) {
-#ifdef DEBUG
 		std::cout << "VirtualAlloc Error: " << GetLastError() << std::endl;
-#endif 
 		return NULL;
 	}
 	// Read the file and put into the buffer
 	if (ReadFile(fileHandle, fileBuffer, fileSize, NULL, NULL) == FALSE) {
-#ifdef DEBUG
 		std::cout << "ReadFile Error: " << GetLastError() << std::endl;
-#endif 
 		return NULL;
 	}
 	CloseHandle(fileHandle);

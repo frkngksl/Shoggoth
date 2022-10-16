@@ -177,6 +177,9 @@
     <ClCompile Include="SecondEncryption.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="OptionsHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="asmjit\asmjit-scope-begin.h">
@@ -405,6 +408,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SecondEncryption.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="OptionsHelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

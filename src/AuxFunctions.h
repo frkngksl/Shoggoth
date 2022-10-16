@@ -1,6 +1,9 @@
 #pragma once
 #include <Windows.h>
+#include <iostream>
 #include "ShoggothEngine.h"
+
+
 bool RandomizeBool();
 unsigned long long RandomizeQWORD();
 unsigned long RandomizeDWORD();

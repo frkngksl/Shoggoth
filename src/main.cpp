@@ -5,25 +5,10 @@
 #include "ShoggothEngine.h"
 #include "AuxFunctions.h"
 #include "Structs.h"
+#include "OptionsHelper.h"
 
 
 typedef void(*RUNCOFF)(PBYTE, PCHAR, UINT32);
-
-void printHeader() {
-	const char* shoggothHeader = R"(
-  ______ _                                  _     
- / _____) |                             _  | |    
-( (____ | |__   ___   ____  ____  ___ _| |_| |__  
- \____ \|  _ \ / _ \ / _  |/ _  |/ _ (_   _)  _ \ 
- _____) ) | | | |_| ( (_| ( (_| | |_| || |_| | | |
-(______/|_| |_|\___/ \___ |\___ |\___/  \__)_| |_|
-                    (_____(_____|                                                                          
-
-		     by @R0h1rr1m
-)";
-	std::cout << shoggothHeader << std::endl;
-}
-
 
 int main(int argc, char *argv[]) {
 	bool peMode = false;
@@ -34,82 +19,98 @@ int main(int argc, char *argv[]) {
 	PBYTE encryptedPayload = NULL;
 	// Polymorphic Engine Object
 	ShoggothPolyEngine* shoggothEngine = NULL;
-	
-	if (argc != 3) {
-		std::cout << "[+] Usage: " << argv[0] << " <input payload> <output name>" << std::endl;
+	OPTIONS configurationOptions;
+	memset(&configurationOptions, 0x00, sizeof(OPTIONS));
+	PrintHeader();
+	if (!ParseArgs(argc,argv,configurationOptions)) {
+		std::cout << "\n[!] Error on parsing arguments. You may have forgotten mandatory options. Use -h for help.\n" << std::endl;
 		return -1;
 	}
 	// Read the input binary
-	inputFileBuffer = ReadBinary(argv[1], inputSize);
+	inputFileBuffer = ReadBinary(configurationOptions.inputPath, inputSize);
+	
 	if (!inputFileBuffer || !inputSize) {
 		std::cout << "[!] Can't read the input exe: " << argv[1] << std::endl;
 		return -1;
 	}
+	if (configurationOptions.isVerbose) {
+		std::cout << "[+] " << configurationOptions.inputPath << " is read!" << std::endl;
+	}
 
-	std::cout << "[+] " << argv[1] << " is read!" << std::endl;
-	// Check the input file is a PE file or not
-	if (CheckValidPE(inputFileBuffer)) {
-		// Check it is x64 or not
-		if (Checkx64PE(inputFileBuffer)) {
-			std::cout << "[+] Input file is a valid x64 PE! PE encoding is choosing..." << std::endl;
-			peMode = false;
+	// Initiate the engine
+	shoggothEngine = new ShoggothPolyEngine(&configurationOptions);
+
+	if (configurationOptions.isVerbose) {
+		std::cout << "[+] Shoggoth engine is initiated!" << std::endl;
+	}
+
+	if (configurationOptions.operationMode == PE_LOADER_MODE) {
+		if (configurationOptions.isVerbose) {
+			std::cout << "[+] PE Loader mode is selected!" << std::endl;
+		}
+		// Check the input file is a PE file or not
+		if (CheckValidPE(inputFileBuffer)) {
+			// Check it is x64 or not
+			if (Checkx64PE(inputFileBuffer) ) {
+				if (configurationOptions.isVerbose) {
+					std::cout << "[+] Input file is a valid x64 PE! PE encoding is choosing..." << std::endl;
+				}
+			}
+			else {
+				std::cout << "[!] x86 PE is detected! Shoggoth doesn't support x86 PE yet!" << std::endl;
+				return -1;
+			}
+
 		}
 		else {
-			std::cout << "[!] x86 PE is detected! Shoggoth doesn't support x86 PE yet!" << std::endl;
+			std::cout << "[!] Given input file is not a PE!" << std::endl;
 			return -1;
+		}
+		inputFileBuffer = shoggothEngine->AddPELoader(inputFileBuffer, inputSize, inputSize);
+		if (configurationOptions.isVerbose) {
+			std::cout << "[+] PE loader payload is appended!" << std::endl;
 		}
 		
 	}
-	// Since it is not a PE according to PE signatures, we can 
-	else {
-		std::cout << "[+] Input file is not a x64 PE! Shellcode encoding is choosing..." << std::endl;
-		peMode = true;
-	}
-	// Initiate the engine
-	shoggothEngine = new ShoggothPolyEngine(peMode, coffMode);
-
-	if (!peMode) {
-		// If our input file is a PE, append reflective loader
-		inputFileBuffer = shoggothEngine->AddReflectiveLoader(inputFileBuffer, inputSize, inputSize);
-		std::cout << "[+] Reflective loader payload is added!" << std::endl;
-	}
-
-	if (coffMode) {
-		char stubFilePath[MAX_PATH] = { 0 };
-		
-		int coffLoaderSize = 0;
-		
-		// If you want to use another stub, you should change this hardcoded string
-		snprintf(stubFilePath, MAX_PATH, "%s..\\stub\\COFFLoader.bin", SOLUTIONDIR);
-		// Read reflective loader binary
-		PBYTE coffLoader3 = ReadBinary(stubFilePath, coffLoaderSize);
-		RUNCOFF test2 = (RUNCOFF)coffLoader3;
-		 test2(inputFileBuffer, NULL, 0);
-		if (argc == 4) {
-			inputFileBuffer = shoggothEngine->AddCOFFLoader(inputFileBuffer, inputSize, (PBYTE)argv[3], strlen(argv[3]), inputSize);
+	else if (configurationOptions.operationMode == COFF_LOADER_MODE) {
+		if (configurationOptions.isVerbose) {
+			std::cout << "[+] COFF Loader mode is selected!" << std::endl;
+		}
+		if (configurationOptions.coffArg) {
+			inputFileBuffer = shoggothEngine->AddCOFFLoader(inputFileBuffer, inputSize, (PBYTE)configurationOptions.coffArg, strlen(configurationOptions.coffArg), inputSize);
 		}
 		else {
 			inputFileBuffer = shoggothEngine->AddCOFFLoader(inputFileBuffer, inputSize, NULL, 0, inputSize);
 		}
-
-		Func test = (Func)inputFileBuffer;
-		test();
+		if (configurationOptions.isVerbose) {
+			std::cout << "[+] COFF loader payload is appended!" << std::endl;
+		}
 	}
-	
-
+	else {
+		if (configurationOptions.isVerbose) {
+			std::cout << "[+] Shellcode Loader mode is selected!" << std::endl;
+		}
+	}
+	if (configurationOptions.isVerbose) {
+		std::cout << "[+] Polymorphic encryption starts..." << std::endl;
+	}
 	// Start Encryption Process
 	encryptedPayload = shoggothEngine->StartPolymorphicEncrypt(inputFileBuffer, inputSize, encryptedPayloadSize);
 	std::cout << "[+] Polymorphic encryption is done!" << std::endl;
 
 	// Write output
-	if (WriteBinary(argv[2], encryptedPayload, encryptedPayloadSize)) {
-		std::cout << "Encrypted payload is saved as " << argv[2] << std::endl;
+	if (WriteBinary(configurationOptions.outputPath, encryptedPayload, encryptedPayloadSize)) {
+		if (configurationOptions.isVerbose) {
+			std::cout << "Encrypted payload is saved as " << configurationOptions.outputPath << std::endl;
+		}
 	}
 	else {
-		std::cout << "[!] Error on writing to " << argv[2] << std::endl;
+		std::cout << "[!] Error on writing to " << configurationOptions.outputPath << std::endl;
+		return -1;
 	}
-	 Func test = (Func ) encryptedPayload;
-	 test();
-
+	/*
+	Func test = (Func ) encryptedPayload;
+	test();
+	*/
 	return 0;
 }

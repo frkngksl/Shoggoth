@@ -3,12 +3,17 @@
 #include <iostream>
 
 
-ShoggothPolyEngine::ShoggothPolyEngine(bool shellcodeMode,bool coffMode):
+ShoggothPolyEngine::ShoggothPolyEngine(OPTIONS* parsedOptions):
     allRegs{ x86::rax, x86::rbx, x86::rcx, x86::rdx, x86::rsi, x86::rdi, x86::rsp, x86::rbp, x86::r8,x86::r9,x86::r10,x86::r11,x86::r12,x86::r13,x86::r14,x86::r15 },
     generalPurposeRegs { x86::rax, x86::rbx, x86::rcx, x86::rdx, x86::rsi, x86::rdi, x86::r8,x86::r9,x86::r10,x86::r11,x86::r12,x86::r13,x86::r14,x86::r15 }
     {
-    this->shellcodeMode = shellcodeMode;
-    srand(time(NULL));
+    memcpy(&(this->configurationOptions), parsedOptions, sizeof(OPTIONS));
+    if (this->configurationOptions.useSeed) {
+        srand(this->configurationOptions.seed);
+    }
+    else {
+        srand(time(NULL));
+    }
     this->StartAsmjit();
 }
 
@@ -16,7 +21,7 @@ ShoggothPolyEngine::ShoggothPolyEngine(bool shellcodeMode,bool coffMode):
 // *****************************************************
 
 // Resulted form is call + payload + pop garbage + reflective loader
-PBYTE ShoggothPolyEngine::AddReflectiveLoader(PBYTE payload, int payloadSize, int& newPayloadSize) {
+PBYTE ShoggothPolyEngine::AddPELoader(PBYTE payload, int payloadSize, int& newPayloadSize) {
     int reflectiveLoaderSize = 0;
     int callStubSize = 0;
     int payloadWithCallSize = 0;
@@ -36,6 +41,7 @@ PBYTE ShoggothPolyEngine::AddReflectiveLoader(PBYTE payload, int payloadSize, in
     // Read reflective loader binary
     reflectiveLoader = ReadBinary(stubFilePath, reflectiveLoaderSize);
     if (reflectiveLoader == NULL || reflectiveLoaderSize == 0) {
+        std::cout << "[!] PE Loader shellcode is missing!" << std::endl;
         return NULL;
     }
     // Put a call to get payload address thanks to call instruction
@@ -104,6 +110,7 @@ PBYTE ShoggothPolyEngine::AddCOFFLoader(PBYTE payload, int payloadSize, PBYTE ar
     // Read reflective loader binary
     coffLoader = ReadBinary(stubFilePath, coffLoaderSize);
     if (coffLoader == NULL || coffLoaderSize == 0) {
+        std::cout << "[!] COFF Loader shellcode is missing!" << std::endl;
         return NULL;
     }
     // Put a call to get payload address thanks to call instruction
@@ -307,7 +314,7 @@ PBYTE ShoggothPolyEngine::StartPolymorphicEncrypt(PBYTE payload, int payloadSize
     PBYTE returnValue = NULL;
     
     // Add pop instructions at the end of the payload - Meaningless for PE Loading
-    if (this->shellcodeMode) {
+    if (this->configurationOptions.operationMode == SHELLCODE_MODE) {
         PBYTE oldPayload = payload;
         popStub = this->PopAllRegisters(popStubSize);
         payload = MergeChunks(payload, payloadSize, popStub, popStubSize);
@@ -352,7 +359,7 @@ PBYTE ShoggothPolyEngine::StartPolymorphicEncrypt(PBYTE payload, int payloadSize
     returnValue = secondDecryptorAndEncryptedPayload;
 
     // Add push instructions at the beginning of the payload - Meaningless for PE Loading
-    if (this->shellcodeMode) {
+    if (this->configurationOptions.operationMode == SHELLCODE_MODE) {
         // Arrange return values again for push registers
         pushStub = this->PushAllRegisters(pushStubSize);
         returnValue = MergeChunks(pushStub, pushStubSize, secondDecryptorAndEncryptedPayload, secondDecryptorAndEncryptedPayloadSize);

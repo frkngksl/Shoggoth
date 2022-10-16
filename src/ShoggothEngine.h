@@ -11,13 +11,12 @@ using namespace asmjit;
 class ShoggothPolyEngine
 {
 public:
-    ShoggothPolyEngine(bool shellcodeMode, bool coffMode);
+    ShoggothPolyEngine(OPTIONS *parsedOptions);
 
     PBYTE StartPolymorphicEncrypt(PBYTE payload, int payloadSize, int& encryptedSize);
-    PBYTE AddReflectiveLoader(PBYTE payload, int payloadSize, int& newPayloadSize);
+    PBYTE AddPELoader(PBYTE payload, int payloadSize, int& newPayloadSize);
     PBYTE AddCOFFLoader(PBYTE payload, int payloadSize, PBYTE arguments, int argumentSize, int& newPayloadSize);
 private:
-    bool shellcodeMode;
 
     CodeHolder asmjitCodeHolder;
 
@@ -37,6 +36,8 @@ private:
     uint64_t numberOfBlocks;
 
     x86::Gp addressHolderForSecondEncryption;
+
+    OPTIONS configurationOptions;
 
     // -----
     void MixupArrayRegs(x86::Reg* registerArr, WORD size);

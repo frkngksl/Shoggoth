@@ -37,3 +37,26 @@ typedef struct
 } importStruct;
 
 typedef int (*Func)(void);
+
+typedef enum
+{
+    INVALID_MODE = 0,
+    SHELLCODE_MODE,
+    PE_LOADER_MODE,
+    COFF_LOADER_MODE,
+} OPERATIONMODE;
+
+typedef struct {
+    OPERATIONMODE operationMode;
+    LPSTR inputPath;
+    LPSTR outputPath;
+    LPSTR encryptionKey;
+    LPSTR coffArg;
+    bool isVerbose;
+    bool doFirstEncryption;
+    bool encryptOnlyDecryptor;
+    bool dontDoFirstEncryption;
+    bool dontDoSecondEncryption;
+    bool useSeed;
+    int seed;
+} OPTIONS;

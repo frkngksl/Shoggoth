@@ -191,6 +191,7 @@
     <ClCompile Include="AuxFunctions.cpp" />
     <ClCompile Include="FirstEncryption.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="OptionsHelper.cpp" />
     <ClCompile Include="SecondEncryption.cpp" />
     <ClCompile Include="ShoggothEngine.cpp" />
   </ItemGroup>
@@ -268,6 +269,7 @@
     <ClInclude Include="asmjit\x86\x86rapass_p.h" />
     <ClInclude Include="AuxFunctions.h" />
     <ClInclude Include="FirstEncryption.h" />
+    <ClInclude Include="OptionsHelper.h" />
     <ClInclude Include="SecondEncryption.h" />
     <ClInclude Include="ShoggothEngine.h" />
     <ClInclude Include="Structs.h" />
