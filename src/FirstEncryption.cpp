@@ -59,13 +59,13 @@ void ShoggothPolyEngine::EncryptRC4(RC4STATE* state, uint8_t* msg, size_t len) {
     Ayrica payloadin nerde oldugunu gormek için de takip etmek icin de index diye bi degisken kullaniyo
 */
 
-PBYTE ShoggothPolyEngine::FirstDecryptor(PBYTE cipheredPayload, int cipheredPayloadSize, PBYTE key, int keySize, int& firstDecryptorSize) {
+PBYTE ShoggothPolyEngine::FirstDecryptor(PBYTE cipheredPayload, int cipheredPayloadSize, PBYTE key, int keySize,int& firstDecryptorSize, int& firstEncryptionStubSize) {
     // Dummy Decryptor
     RC4STATE state = { 0 };
     PBYTE RC4DecryptorStub = 0;
     this->InitRC4State(&state, key, keySize);
 
-    RC4DecryptorStub = this->GenerateRC4Decryptor(cipheredPayload, cipheredPayloadSize, &state, firstDecryptorSize);
+    RC4DecryptorStub = this->GenerateRC4Decryptor(cipheredPayload, cipheredPayloadSize, &state, firstDecryptorSize, firstEncryptionStubSize);
 
     return RC4DecryptorStub;
 }
@@ -89,11 +89,12 @@ PBYTE ShoggothPolyEngine::FirstDecryptor(PBYTE cipheredPayload, int cipheredPayl
      *
      Decryptor - State Struct - Encrypted payload
 */
-PBYTE ShoggothPolyEngine::GenerateRC4Decryptor(PBYTE payload, int payloadSize, RC4STATE* statePtr, int& firstEncryptionStubSize) {
+PBYTE ShoggothPolyEngine::GenerateRC4Decryptor(PBYTE payload, int payloadSize, RC4STATE* statePtr,int &decryptorSize, int& firstEncryptionStubSize) {
     PBYTE returnPtr = NULL;
     PBYTE codePtr = NULL;
     PBYTE cursor = NULL;
     int RC4DecryptorSize = 0;
+    int tempSize = 0;
     DWORD adjustSize = 0;
     uint64_t patchAddress = NULL;
     uint64_t callOffset = NULL;
@@ -114,6 +115,7 @@ PBYTE ShoggothPolyEngine::GenerateRC4Decryptor(PBYTE payload, int payloadSize, R
     x86::Gp tempSj = this->generalPurposeRegs[4]; // x86::rbx;
     x86::Gp tempi = this->generalPurposeRegs[5]; // x86::rcx;
     x86::Gp tempj = this->generalPurposeRegs[6]; // x86::rdx;
+    x86::Gp tempPop = this->generalPurposeRegs[7];
 
 
     // call randomLabel
@@ -221,11 +223,29 @@ PBYTE ShoggothPolyEngine::GenerateRC4Decryptor(PBYTE payload, int payloadSize, R
     asmjitAssembler->mov(x86::byte_ptr(rc4StateAddress, -1), tempj.r8Lo());
 
     // Jmp to payload - Only ret now
-    asmjitAssembler->ret();
+    // 
 
+    if (this->configurationOptions.encryptOnlyDecryptor) {
+        int counterForNop = 0;
+        asmjitAssembler->pop(tempPop);
+        // Current length + jmp + add + rc4state
+        tempSize = asmjitAssembler->offset() - this->startOffset + 2 + 4 + sizeof(RC4STATE) + payloadSize;
+        // jmp is two bytes
+        for (counterForNop = 0; tempSize % BLOCK_SIZE && counterForNop < BLOCK_SIZE - tempSize % BLOCK_SIZE; counterForNop++) {
+            asmjitAssembler->nop();
+        }
+        asmjitAssembler->add(tempPop, counterForNop);
+        asmjitAssembler->jmp(tempPop);
+
+    }
+    else {
+        asmjitAssembler->ret();
+    }
+    
     // Patch the offset
     currentOffset = asmjitAssembler->offset();
     adjustSize = currentOffset - callOffset;
+
     asmjitAssembler->setOffset(patchAddress);
     asmjitAssembler->dd(adjustSize);
     asmjitAssembler->setOffset(currentOffset);
@@ -240,7 +260,7 @@ PBYTE ShoggothPolyEngine::GenerateRC4Decryptor(PBYTE payload, int payloadSize, R
     this->asmjitRuntime.release(codePtr);
     // VirtualFree(codePtr, 0, MEM_RELEASE);
     VirtualFree(payload, 0, MEM_RELEASE);
-
+    decryptorSize = RC4DecryptorSize;
     firstEncryptionStubSize = payloadSize + RC4DecryptorSize;
     HeapFree(GetProcessHeap(), NULL, randomStringForLoop);
     HeapFree(GetProcessHeap(), NULL, randomStringForEnd);

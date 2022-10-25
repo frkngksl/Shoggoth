@@ -40,6 +40,9 @@ PBYTE ShoggothPolyEngine::AddPELoader(PBYTE payload, int payloadSize, int& newPa
     snprintf(stubFilePath, MAX_PATH, "%s..\\stub\\PELoader.bin", SOLUTIONDIR);
     // Read reflective loader binary
     reflectiveLoader = ReadBinary(stubFilePath, reflectiveLoaderSize);
+    if (this->configurationOptions.isVerbose) {
+        std::cout << "[+] PE Loader Shellcode is read!" << std::endl;
+    }
     if (reflectiveLoader == NULL || reflectiveLoaderSize == 0) {
         std::cout << "[!] PE Loader shellcode is missing!" << std::endl;
         return NULL;
@@ -75,7 +78,9 @@ PBYTE ShoggothPolyEngine::AddPELoader(PBYTE payload, int payloadSize, int& newPa
     VirtualFree(payloadWithCallAndPop, 0, MEM_RELEASE);
     VirtualFree(reflectiveLoader, 0, MEM_RELEASE);
     newPayloadSize = payloadWithLoaderSize;
-
+    if (this->configurationOptions.isVerbose) {
+        std::cout << "[+] PE Loader and given payload is merged!" << std::endl;
+    }
     return payloadWithLoader;
 }
 
@@ -112,6 +117,9 @@ PBYTE ShoggothPolyEngine::AddCOFFLoader(PBYTE payload, int payloadSize, PBYTE ar
     if (coffLoader == NULL || coffLoaderSize == 0) {
         std::cout << "[!] COFF Loader shellcode is missing!" << std::endl;
         return NULL;
+    }
+    if (this->configurationOptions.isVerbose) {
+        std::cout << "[!] COFF Loader shellcode is read!" << std::endl;
     }
     // Put a call to get payload address thanks to call instruction
     callStub = this->GetCallInstructionOverPayloadAndArguments(payloadSize, argumentSize, callStubSize);
@@ -160,6 +168,10 @@ PBYTE ShoggothPolyEngine::AddCOFFLoader(PBYTE payload, int payloadSize, PBYTE ar
     VirtualFree(payloadWithCallAndPop, 0, MEM_RELEASE);
     VirtualFree(coffLoader, 0, MEM_RELEASE);
     newPayloadSize = payloadWithLoaderSize;
+
+    if (this->configurationOptions.isVerbose) {
+        std::cout << "[+] COFF Loader and given payload is merged!" << std::endl;
+    }
 
     return payloadWithLoader;
 }
@@ -296,32 +308,37 @@ PBYTE ShoggothPolyEngine::StartPolymorphicEncrypt(PBYTE payload, int payloadSize
     int firstGarbageWithPayloadSize = 0;
     int firstDecryptorAndEncryptedPayloadSize = 0;
     int firstEncryptedPayloadSize = 0;
+    int firstDecryptorSize = 0;
     int secondEncryptedSize = 0;
     int secondDecryptorAndEncryptedPayloadSize = 0;
     int firstKeySize = RandomizeInRange(1, 256);
     int popStubSize = 0;
     int pushStubSize = 0;
     int returnSize = 0;
+    bool isRandomKey = false;
+    bool secondEncryptionPerformed = false;
     PBYTE firstGarbage = NULL;
     PBYTE firstGarbageWithPayload = NULL;
     PBYTE firstEncryptedPayload = NULL;
     PBYTE firstDecryptorAndEncryptedPayload = NULL;
-    PBYTE firstEncryptionKey = GetRandomBytes(firstKeySize);
+    //PBYTE firstEncryptionKey = GetRandomBytes(firstKeySize);
+    PBYTE firstEncryptionKey = NULL;
     PBYTE secondEncryptedPayload = NULL;
     PBYTE secondDecryptorAndEncryptedPayload = NULL;
     PBYTE popStub = NULL;
     PBYTE pushStub = NULL;
     PBYTE returnValue = NULL;
     
-    // Add pop instructions at the end of the payload - Meaningless for PE Loading
-    if (this->configurationOptions.operationMode == SHELLCODE_MODE) {
+    if (this->configurationOptions.saveRegisters) {
         PBYTE oldPayload = payload;
         popStub = this->PopAllRegisters(popStubSize);
         payload = MergeChunks(payload, payloadSize, popStub, popStubSize);
         VirtualFree(oldPayload, 0, MEM_RELEASE);
         this->asmjitRuntime.release(popStub);
-
         payloadSize += popStubSize;
+        if (this->configurationOptions.isVerbose) {
+            std::cout << "[+] Pop registers stub are added!" << std::endl;
+        }
     }
     
 
@@ -334,40 +351,118 @@ PBYTE ShoggothPolyEngine::StartPolymorphicEncrypt(PBYTE payload, int payloadSize
     VirtualFree(firstGarbage, 0, MEM_RELEASE);
     firstGarbageWithPayloadSize = payloadSize + firstGarbageSize;
 
-    std::cout << "[+] First randomly generated garbage instruction stub is added!" << std::endl;
+    if (this->configurationOptions.isVerbose) {
+        std::cout << "[+] First randomly generated garbage instruction stub is added!" << std::endl;
+    }
 
-    // Encrypt garbage + payload
-    firstEncryptedPayload = this->FirstEncryption(firstGarbageWithPayload, firstGarbageWithPayloadSize, firstEncryptionKey, firstKeySize);
-    firstEncryptedPayloadSize = firstGarbageWithPayloadSize;
+    if (this->configurationOptions.encryptionKey) {
+        firstEncryptionKey = (PBYTE) this->configurationOptions.encryptionKey;
+        if (this->configurationOptions.isVerbose) {
+            std::cout << "[+] First encryption key is set to " << this->configurationOptions.encryptionKey << " !" << std::endl;
+        }
+    }
+    else {
+        isRandomKey = true;
+        firstEncryptionKey = GetRandomBytes(firstKeySize);
+        if (this->configurationOptions.isVerbose) {
+            std::cout << "[+] First encryption key is selected randomly!" << std::endl;
+        }
+    }
 
-    std::cout << "[+] First encryption is performed!" << std::endl;
+    if (!this->configurationOptions.dontDoFirstEncryption) {
+        // Encrypt garbage + payload
+        firstEncryptedPayload = this->FirstEncryption(firstGarbageWithPayload, firstGarbageWithPayloadSize, firstEncryptionKey, firstKeySize);
+        firstEncryptedPayloadSize = firstGarbageWithPayloadSize;
 
-    // Append Decryptor stub
-    firstDecryptorAndEncryptedPayload = this->FirstDecryptor(firstEncryptedPayload, firstEncryptedPayloadSize, firstEncryptionKey, firstKeySize, firstDecryptorAndEncryptedPayloadSize);
-    std::cout << "[+] First decryptor stub is generated and merged!" << std::endl;
+        if (this->configurationOptions.isVerbose) {
+            std::cout << "[+] First encryption is performed!" << std::endl;
+        }
+
+        // Append Decryptor stub
+        firstDecryptorAndEncryptedPayload = this->FirstDecryptor(firstEncryptedPayload, firstEncryptedPayloadSize, firstEncryptionKey, firstKeySize, firstDecryptorSize,firstDecryptorAndEncryptedPayloadSize);
+
+        if (this->configurationOptions.isVerbose) {
+            std::cout << "[+] First decryptor stub is generated and merged!" << std::endl;
+        }
+    }
+    else {
+        if (this->configurationOptions.isVerbose) {
+            std::cout << "[+] First encryption is skipped!" << std::endl;
+        }
+        firstDecryptorAndEncryptedPayload = firstGarbageWithPayload;
+        firstDecryptorAndEncryptedPayloadSize = firstGarbageWithPayloadSize;
+        firstDecryptorSize = firstGarbageWithPayloadSize;
+    }
     
-    // Apply second encryption
-    secondEncryptedPayload = this->SecondEncryption(firstDecryptorAndEncryptedPayload, firstDecryptorAndEncryptedPayloadSize, secondEncryptedSize);
-    std::cout << "[+] Second encryption is performed!" << std::endl;
+    if (!this->configurationOptions.dontDoSecondEncryption) {
+        // Apply second encryption
+        if (this->configurationOptions.encryptOnlyDecryptor) {
+            // 0x90 ? Fix the patch
+            PBYTE oldSecondEncryptedPayload = NULL;
+            // Form is first decryptor + payload
+            secondEncryptedPayload = this->SecondEncryption(firstDecryptorAndEncryptedPayload, firstDecryptorSize, secondEncryptedSize);
+            oldSecondEncryptedPayload = secondEncryptedPayload;
+            // TODO: Test skip first encryption
+            // Skip decryptor and merge the payload
+            secondEncryptedPayload = MergeChunks(secondEncryptedPayload, secondEncryptedSize, firstDecryptorAndEncryptedPayload + firstDecryptorSize, firstDecryptorAndEncryptedPayloadSize - firstDecryptorSize);
+            secondEncryptedSize += (firstDecryptorAndEncryptedPayloadSize - firstDecryptorSize);
+            VirtualFree(firstDecryptorAndEncryptedPayload, 0, MEM_RELEASE);
+            VirtualFree(oldSecondEncryptedPayload, 0, MEM_RELEASE);
+            secondDecryptorAndEncryptedPayload = this->SecondDecryptor(secondEncryptedPayload, secondEncryptedSize, secondDecryptorAndEncryptedPayloadSize);
+            if (this->configurationOptions.isVerbose) {
+                std::cout << "[+] Only Decryptor is encrypted in second encryption!" << std::endl;
+            }
+        }
+        else {
+            secondEncryptedPayload = this->SecondEncryption(firstDecryptorAndEncryptedPayload, firstDecryptorAndEncryptedPayloadSize, secondEncryptedSize);
+            VirtualFree(firstDecryptorAndEncryptedPayload, 0, MEM_RELEASE);
+            // Merge second decryptor
+            secondDecryptorAndEncryptedPayload = this->SecondDecryptor(secondEncryptedPayload, secondEncryptedSize, secondDecryptorAndEncryptedPayloadSize);
+            if (this->configurationOptions.isVerbose) {
+                std::cout << "[+] Full output is encrypted in second encryption!" << std::endl;
+            }
+        }
+        if (this->configurationOptions.isVerbose) {
+            std::cout << "[+] Second encryption is performed!" << std::endl;
+        }
+
+
+        if (this->configurationOptions.isVerbose) {
+            std::cout << "[+] Second decryptor stub is generated and merged!" << std::endl;
+        }
+
+        // Arrange return values
+        returnValue = secondDecryptorAndEncryptedPayload;
+        encryptedSize = secondDecryptorAndEncryptedPayloadSize;
+        secondEncryptionPerformed = true;
+    }
+    else {
+        if (this->configurationOptions.isVerbose) {
+            std::cout << "[+] Second encryption is skipped!" << std::endl;
+        }
+        returnValue = firstDecryptorAndEncryptedPayload;
+        encryptedSize = firstDecryptorAndEncryptedPayloadSize;
+    }
     
-    // Merge second decryptor
-    secondDecryptorAndEncryptedPayload = this->SecondDecryptor(secondEncryptedPayload, secondEncryptedSize, secondDecryptorAndEncryptedPayloadSize);
-    std::cout << "[+] Second decryptor stub is generated and merged!" << std::endl;
-    
-    // Arrange return values
-    encryptedSize = secondDecryptorAndEncryptedPayloadSize;
-    returnValue = secondDecryptorAndEncryptedPayload;
 
     // Add push instructions at the beginning of the payload - Meaningless for PE Loading
-    if (this->configurationOptions.operationMode == SHELLCODE_MODE) {
+    if (this->configurationOptions.saveRegisters) {
         // Arrange return values again for push registers
         pushStub = this->PushAllRegisters(pushStubSize);
-        returnValue = MergeChunks(pushStub, pushStubSize, secondDecryptorAndEncryptedPayload, secondDecryptorAndEncryptedPayloadSize);
-        VirtualFree(secondDecryptorAndEncryptedPayload, 0, MEM_RELEASE);
+        returnValue = MergeChunks(pushStub, pushStubSize, returnValue, encryptedSize);
+        if (secondEncryptionPerformed) {
+            VirtualFree(secondDecryptorAndEncryptedPayload, 0, MEM_RELEASE);
+        }
         this->asmjitRuntime.release(pushStub);
         encryptedSize += pushStubSize;
+
+        if (this->configurationOptions.isVerbose) {
+            std::cout << "[+] Push registers stub are added!" << std::endl;
+        }
     }
-    HeapFree(GetProcessHeap(), NULL, firstEncryptionKey);
+    if (isRandomKey) {
+        HeapFree(GetProcessHeap(), NULL, firstEncryptionKey);
+    }
     return returnValue;
 }
 

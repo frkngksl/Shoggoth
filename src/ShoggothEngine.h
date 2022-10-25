@@ -69,10 +69,10 @@ private:
     void RandomUnsafeGarbage();
     
     PBYTE FirstEncryption(PBYTE plainPayload, int payloadSize, PBYTE key, int keySize);
-    PBYTE GenerateRC4Decryptor(PBYTE payload, int payloadSize, RC4STATE* statePtr, int& firstEncryptionStubSize);
+    PBYTE GenerateRC4Decryptor(PBYTE payload, int payloadSize, RC4STATE* statePtr, int& firstDecryptorSize, int& firstEncryptionStubSize);
     void InitRC4State(RC4STATE* state, uint8_t* key, size_t len);
     void EncryptRC4(RC4STATE* state, uint8_t* msg, size_t len);
-    PBYTE FirstDecryptor(PBYTE cipheredPayload, int cipheredPayloadSize, PBYTE key, int keySize, int& firstDecryptorSize);
+    PBYTE FirstDecryptor(PBYTE cipheredPayload, int cipheredPayloadSize, PBYTE key, int keySize, int& firstDecryptorSize, int& firstEncryptionStubSize);
     
 
     PBYTE GetPopInstructionAfterPayload(int& popSize);

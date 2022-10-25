@@ -25,7 +25,7 @@ void PrintHelp(char *binaryName) {
     -o | --output <Output Path>             Output path for encrypted input. (Mandatory) 
     -s | --seed <Value>                     Set seed value for randomization.
     -m | --mode <Mode Value>                Set payload encryption mode. Available mods are: (Mandatory) 
-                                                [*] shellcode - Shoggoth doesn't append a loader stub.
+                                                [*] raw - Shoggoth doesn't append a loader stub.
                                                 [*] PE - Shoggoth appends a PE loader stub. The input should be valid x64 PE.
                                                 [*] COFF - Shoggoth appends a COFF loader stub. The input should be valid x64 COFF.
     --coff-arg <Argument>                   Set argument for COFF loader. Only used in COFF loader mode.
@@ -33,6 +33,7 @@ void PrintHelp(char *binaryName) {
     --dont-do-first-encryption              Don't do the first (stream cipher) encryption.
     --dont-do-second-encryption             Don't do the second (block cipher) encryption.
     --encrypt-only-decryptor                Encrypt only decryptor stub in the second encryption.
+    --save-registers                        Save registers and restore them at the end of the execution.
 )";
     std::cout << "Usage of " << binaryName << ":" << std::endl;
     std::cout << optionsString << std::endl;
@@ -75,8 +76,8 @@ bool ParseArgs(int argc, char* argv[], OPTIONS& configurationOptions) {
             if (i > argc) {
                 return false;
             }
-            if (_strcmpi(argv[i], "shellcode") == 0) {
-                configurationOptions.operationMode = SHELLCODE_MODE;
+            if (_strcmpi(argv[i], "raw") == 0) {
+                configurationOptions.operationMode = RAW_MODE;
             }
             else if (_strcmpi(argv[i], "PE") == 0) {
                 configurationOptions.operationMode = PE_LOADER_MODE;
@@ -103,6 +104,9 @@ bool ParseArgs(int argc, char* argv[], OPTIONS& configurationOptions) {
         }
         else if (_strcmpi(argv[i], "--encrypt-only-decryptor") == 0) {
             configurationOptions.encryptOnlyDecryptor = true;
+        }
+        else if (_strcmpi(argv[i], "--save-registers") == 0) {
+            configurationOptions.saveRegisters = true;
         }
         else if (_strcmpi(argv[i], "--coff-arg") == 0) {
             i++;

@@ -12,6 +12,8 @@ PBYTE ShoggothPolyEngine::SecondEncryption(PBYTE plainPayload, int payloadSize, 
     //encryptedArea = (PBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, newPayloadSize);
     encryptedArea = (PBYTE)VirtualAlloc(NULL, newPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
     memcpy(encryptedArea, plainPayload, payloadSize);
+    // Put nop sled
+    // This should be 0 for only decrptor encrypt case
     memset(encryptedArea + payloadSize, 0x90, (payloadSize % BLOCK_SIZE ? BLOCK_SIZE - payloadSize % BLOCK_SIZE : 0));
     blockCursor = (uint64_t*)encryptedArea;
     this->addressHolderForSecondEncryption = this->GetRandomGeneralPurposeRegister();
@@ -21,7 +23,7 @@ PBYTE ShoggothPolyEngine::SecondEncryption(PBYTE plainPayload, int payloadSize, 
         this->ApplyRandomSecondEncryption(blockCursor, &(this->encryptListForBlocks[i]));
         blockCursor++;
     }
-    VirtualFree(plainPayload, 0, MEM_RELEASE);
+    //VirtualFree(plainPayload, 0, MEM_RELEASE);
     return encryptedArea;
 }
 

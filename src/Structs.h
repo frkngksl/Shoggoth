@@ -41,7 +41,7 @@ typedef int (*Func)(void);
 typedef enum
 {
     INVALID_MODE = 0,
-    SHELLCODE_MODE,
+    RAW_MODE,
     PE_LOADER_MODE,
     COFF_LOADER_MODE,
 } OPERATIONMODE;
@@ -53,10 +53,10 @@ typedef struct {
     LPSTR encryptionKey;
     LPSTR coffArg;
     bool isVerbose;
-    bool doFirstEncryption;
     bool encryptOnlyDecryptor;
     bool dontDoFirstEncryption;
     bool dontDoSecondEncryption;
     bool useSeed;
+    bool saveRegisters;
     int seed;
 } OPTIONS;

@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
 	inputFileBuffer = ReadBinary(configurationOptions.inputPath, inputSize);
 	
 	if (!inputFileBuffer || !inputSize) {
-		std::cout << "[!] Can't read the input exe: " << argv[1] << std::endl;
+		std::cout << "[!] Can't read the input exe: " << configurationOptions.inputPath << std::endl;
 		return -1;
 	}
 	if (configurationOptions.isVerbose) {
@@ -67,10 +67,10 @@ int main(int argc, char *argv[]) {
 			return -1;
 		}
 		inputFileBuffer = shoggothEngine->AddPELoader(inputFileBuffer, inputSize, inputSize);
-		if (configurationOptions.isVerbose) {
-			std::cout << "[+] PE loader payload is appended!" << std::endl;
+		if(!inputFileBuffer){
+			std::cout << "[!] Error on merging PE loader and payload!" << std::endl;
+			return -1;
 		}
-		
 	}
 	else if (configurationOptions.operationMode == COFF_LOADER_MODE) {
 		if (configurationOptions.isVerbose) {
@@ -82,14 +82,19 @@ int main(int argc, char *argv[]) {
 		else {
 			inputFileBuffer = shoggothEngine->AddCOFFLoader(inputFileBuffer, inputSize, NULL, 0, inputSize);
 		}
+		if (!inputFileBuffer) {
+			std::cout << "[!] Error on merging COFF loader and payload!" << std::endl;
+			return -1;
+		}
+	}
+	else if (configurationOptions.operationMode == RAW_MODE){
 		if (configurationOptions.isVerbose) {
-			std::cout << "[+] COFF loader payload is appended!" << std::endl;
+			std::cout << "[+] Raw mode is selected!" << std::endl;
+			std::cout << "[+] No loader shellcode will be appended to the payload!" << std::endl;
 		}
 	}
 	else {
-		if (configurationOptions.isVerbose) {
-			std::cout << "[+] Shellcode Loader mode is selected!" << std::endl;
-		}
+		std::cout << "[!] Error on mode selection!" << std::endl;
 	}
 	if (configurationOptions.isVerbose) {
 		std::cout << "[+] Polymorphic encryption starts..." << std::endl;
@@ -108,9 +113,5 @@ int main(int argc, char *argv[]) {
 		std::cout << "[!] Error on writing to " << configurationOptions.outputPath << std::endl;
 		return -1;
 	}
-	/*
-	Func test = (Func ) encryptedPayload;
-	test();
-	*/
 	return 0;
 }
