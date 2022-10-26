@@ -5,7 +5,7 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>C:\Users\picus\Desktop\ShellcodeCOFF\uptime.x64.o test.exe</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-i C:\Users\picus\Desktop\ShellcodeCOFF\notepadSpawn.bin -o test.bin -v -k test -m raw -s 1234 --encrypt-only-decryptor</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>

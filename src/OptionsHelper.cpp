@@ -25,22 +25,23 @@ void PrintHelp(char *binaryName) {
     -o | --output <Output Path>             Output path for encrypted input. (Mandatory) 
     -s | --seed <Value>                     Set seed value for randomization.
     -m | --mode <Mode Value>                Set payload encryption mode. Available mods are: (Mandatory) 
-                                                [*] raw - Shoggoth doesn't append a loader stub.
-                                                [*] PE - Shoggoth appends a PE loader stub. The input should be valid x64 PE.
-                                                [*] COFF - Shoggoth appends a COFF loader stub. The input should be valid x64 COFF.
+                                                [*] raw - Shoggoth doesn't append a loader stub. (Default mode)
+                                                [*] pe - Shoggoth appends a PE loader stub. The input should be valid x64 PE.
+                                                [*] coff - Shoggoth appends a COFF loader stub. The input should be valid x64 COFF.
     --coff-arg <Argument>                   Set argument for COFF loader. Only used in COFF loader mode.
     -k | --key <Encryption Key>             Set first encryption key instead of random key.
     --dont-do-first-encryption              Don't do the first (stream cipher) encryption.
     --dont-do-second-encryption             Don't do the second (block cipher) encryption.
     --encrypt-only-decryptor                Encrypt only decryptor stub in the second encryption.
-    --save-registers                        Save registers and restore them at the end of the execution.
 )";
     std::cout << "Usage of " << binaryName << ":" << std::endl;
     std::cout << optionsString << std::endl;
 
 }
 
+
 bool ParseArgs(int argc, char* argv[], OPTIONS& configurationOptions) {
+    configurationOptions.operationMode = RAW_MODE;
     for (int i = 1; i < argc; i++) {
         if (_strcmpi(argv[i], "-v") == 0 || _strcmpi(argv[i], "--verbose") == 0) {
             configurationOptions.isVerbose = true;
@@ -79,10 +80,10 @@ bool ParseArgs(int argc, char* argv[], OPTIONS& configurationOptions) {
             if (_strcmpi(argv[i], "raw") == 0) {
                 configurationOptions.operationMode = RAW_MODE;
             }
-            else if (_strcmpi(argv[i], "PE") == 0) {
+            else if (_strcmpi(argv[i], "pe") == 0) {
                 configurationOptions.operationMode = PE_LOADER_MODE;
             }
-            else if (_strcmpi(argv[i], "COFF") == 0) {
+            else if (_strcmpi(argv[i], "coff") == 0) {
                 configurationOptions.operationMode = COFF_LOADER_MODE;
             }
             else {
@@ -95,6 +96,7 @@ bool ParseArgs(int argc, char* argv[], OPTIONS& configurationOptions) {
                 return false;
             }
             configurationOptions.encryptionKey = argv[i];
+            configurationOptions.encryptionKeySize = strlen(argv[i]);
         }
         else if (_strcmpi(argv[i], "--dont-do-first-encryption") == 0) {
             configurationOptions.dontDoFirstEncryption = true;
@@ -104,9 +106,6 @@ bool ParseArgs(int argc, char* argv[], OPTIONS& configurationOptions) {
         }
         else if (_strcmpi(argv[i], "--encrypt-only-decryptor") == 0) {
             configurationOptions.encryptOnlyDecryptor = true;
-        }
-        else if (_strcmpi(argv[i], "--save-registers") == 0) {
-            configurationOptions.saveRegisters = true;
         }
         else if (_strcmpi(argv[i], "--coff-arg") == 0) {
             i++;

@@ -95,6 +95,7 @@ PBYTE ShoggothPolyEngine::GenerateRC4Decryptor(PBYTE payload, int payloadSize, R
     PBYTE cursor = NULL;
     int RC4DecryptorSize = 0;
     int tempSize = 0;
+    int counterForNop = 0;
     DWORD adjustSize = 0;
     uint64_t patchAddress = NULL;
     uint64_t callOffset = NULL;
@@ -226,21 +227,26 @@ PBYTE ShoggothPolyEngine::GenerateRC4Decryptor(PBYTE payload, int payloadSize, R
     // 
 
     if (this->configurationOptions.encryptOnlyDecryptor) {
-        int counterForNop = 0;
-        asmjitAssembler->pop(tempPop);
+        // asmjitAssembler->pop(tempPop);
         // Current length + jmp + add + rc4state
-        tempSize = asmjitAssembler->offset() - this->startOffset + 2 + 4 + sizeof(RC4STATE) + payloadSize;
+        tempSize = asmjitAssembler->offset() - this->startOffset + 1 + sizeof(RC4STATE);
+        /*
+        if (tempPop == x86::r8 || tempPop == x86::r9 || tempPop == x86::r10 || tempPop == x86::r11 || tempPop == x86::r12 || tempPop == x86::r13 || tempPop == x86::r14 || tempPop == x86::r15) {
+            tempSize += 3;
+        }
+        else {
+            tempSize += 2;
+        }
+        */
         // jmp is two bytes
-        for (counterForNop = 0; tempSize % BLOCK_SIZE && counterForNop < BLOCK_SIZE - tempSize % BLOCK_SIZE; counterForNop++) {
+        for (counterForNop = 0; tempSize % BLOCK_SIZE && counterForNop < BLOCK_SIZE - (tempSize % BLOCK_SIZE); counterForNop++) {
             asmjitAssembler->nop();
         }
-        asmjitAssembler->add(tempPop, counterForNop);
-        asmjitAssembler->jmp(tempPop);
+        // asmjitAssembler->add(tempPop, counterForNop);
+        // asmjitAssembler->jmp(tempPop);
 
     }
-    else {
-        asmjitAssembler->ret();
-    }
+    asmjitAssembler->ret();
     
     // Patch the offset
     currentOffset = asmjitAssembler->offset();

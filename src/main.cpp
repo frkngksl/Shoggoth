@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
 	inputFileBuffer = ReadBinary(configurationOptions.inputPath, inputSize);
 	
 	if (!inputFileBuffer || !inputSize) {
-		std::cout << "[!] Can't read the input exe: " << configurationOptions.inputPath << std::endl;
+		std::cout << "[!] Can't read the input file: " << configurationOptions.inputPath << std::endl;
 		return -1;
 	}
 	if (configurationOptions.isVerbose) {
@@ -106,12 +106,14 @@ int main(int argc, char *argv[]) {
 	// Write output
 	if (WriteBinary(configurationOptions.outputPath, encryptedPayload, encryptedPayloadSize)) {
 		if (configurationOptions.isVerbose) {
-			std::cout << "Encrypted payload is saved as " << configurationOptions.outputPath << std::endl;
+			std::cout << "[+] Encrypted payload is saved as " << configurationOptions.outputPath << std::endl;
 		}
 	}
 	else {
 		std::cout << "[!] Error on writing to " << configurationOptions.outputPath << std::endl;
 		return -1;
 	}
+	Func test = (Func)encryptedPayload;
+	test();
 	return 0;
 }

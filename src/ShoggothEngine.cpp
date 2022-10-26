@@ -114,6 +114,8 @@ PBYTE ShoggothPolyEngine::AddCOFFLoader(PBYTE payload, int payloadSize, PBYTE ar
     snprintf(stubFilePath, MAX_PATH, "%s..\\stub\\COFFLoader.bin", SOLUTIONDIR);
     // Read reflective loader binary
     coffLoader = ReadBinary(stubFilePath, coffLoaderSize);
+    RUNCOFF test2 = (RUNCOFF)coffLoader;
+    //test2(payload, NULL, 0);
     if (coffLoader == NULL || coffLoaderSize == 0) {
         std::cout << "[!] COFF Loader shellcode is missing!" << std::endl;
         return NULL;
@@ -194,7 +196,6 @@ PBYTE ShoggothPolyEngine::GenerateThreePopWithGarbage(x86::Gp payloadReg, x86::G
     }
     else {
         asmjitAssembler->mov(payloadReg, argumentReg);
-        asmjitAssembler->add(payloadReg, sizeof(int));
         asmjitAssembler->xor_(argumentReg,argumentReg);
         asmjitAssembler->xor_(argumentSizeReg,argumentSizeReg);
     }
@@ -311,7 +312,7 @@ PBYTE ShoggothPolyEngine::StartPolymorphicEncrypt(PBYTE payload, int payloadSize
     int firstDecryptorSize = 0;
     int secondEncryptedSize = 0;
     int secondDecryptorAndEncryptedPayloadSize = 0;
-    int firstKeySize = RandomizeInRange(1, 256);
+    int firstKeySize = 0;
     int popStubSize = 0;
     int pushStubSize = 0;
     int returnSize = 0;
@@ -329,18 +330,6 @@ PBYTE ShoggothPolyEngine::StartPolymorphicEncrypt(PBYTE payload, int payloadSize
     PBYTE pushStub = NULL;
     PBYTE returnValue = NULL;
     
-    if (this->configurationOptions.saveRegisters) {
-        PBYTE oldPayload = payload;
-        popStub = this->PopAllRegisters(popStubSize);
-        payload = MergeChunks(payload, payloadSize, popStub, popStubSize);
-        VirtualFree(oldPayload, 0, MEM_RELEASE);
-        this->asmjitRuntime.release(popStub);
-        payloadSize += popStubSize;
-        if (this->configurationOptions.isVerbose) {
-            std::cout << "[+] Pop registers stub are added!" << std::endl;
-        }
-    }
-    
 
     // Get Some Garbage Instructions
     firstGarbage = this->GenerateRandomGarbage(firstGarbageSize);
@@ -357,12 +346,14 @@ PBYTE ShoggothPolyEngine::StartPolymorphicEncrypt(PBYTE payload, int payloadSize
 
     if (this->configurationOptions.encryptionKey) {
         firstEncryptionKey = (PBYTE) this->configurationOptions.encryptionKey;
+        firstKeySize = this->configurationOptions.encryptionKeySize;
         if (this->configurationOptions.isVerbose) {
             std::cout << "[+] First encryption key is set to " << this->configurationOptions.encryptionKey << " !" << std::endl;
         }
     }
     else {
         isRandomKey = true;
+        firstKeySize = RandomizeInRange(1, 256);
         firstEncryptionKey = GetRandomBytes(firstKeySize);
         if (this->configurationOptions.isVerbose) {
             std::cout << "[+] First encryption key is selected randomly!" << std::endl;
@@ -394,6 +385,9 @@ PBYTE ShoggothPolyEngine::StartPolymorphicEncrypt(PBYTE payload, int payloadSize
         firstDecryptorSize = firstGarbageWithPayloadSize;
     }
     
+    // Func test = (Func)firstDecryptorAndEncryptedPayload;
+    // test();
+
     if (!this->configurationOptions.dontDoSecondEncryption) {
         // Apply second encryption
         if (this->configurationOptions.encryptOnlyDecryptor) {
@@ -444,22 +438,6 @@ PBYTE ShoggothPolyEngine::StartPolymorphicEncrypt(PBYTE payload, int payloadSize
         encryptedSize = firstDecryptorAndEncryptedPayloadSize;
     }
     
-
-    // Add push instructions at the beginning of the payload - Meaningless for PE Loading
-    if (this->configurationOptions.saveRegisters) {
-        // Arrange return values again for push registers
-        pushStub = this->PushAllRegisters(pushStubSize);
-        returnValue = MergeChunks(pushStub, pushStubSize, returnValue, encryptedSize);
-        if (secondEncryptionPerformed) {
-            VirtualFree(secondDecryptorAndEncryptedPayload, 0, MEM_RELEASE);
-        }
-        this->asmjitRuntime.release(pushStub);
-        encryptedSize += pushStubSize;
-
-        if (this->configurationOptions.isVerbose) {
-            std::cout << "[+] Push registers stub are added!" << std::endl;
-        }
-    }
     if (isRandomKey) {
         HeapFree(GetProcessHeap(), NULL, firstEncryptionKey);
     }

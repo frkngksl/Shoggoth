@@ -37,6 +37,7 @@ typedef struct
 } importStruct;
 
 typedef int (*Func)(void);
+typedef void (*RUNCOFF)(PBYTE, PCHAR, UINT32);
 
 typedef enum
 {
@@ -50,13 +51,13 @@ typedef struct {
     OPERATIONMODE operationMode;
     LPSTR inputPath;
     LPSTR outputPath;
-    LPSTR encryptionKey;
     LPSTR coffArg;
+    LPSTR encryptionKey;
+    int encryptionKeySize;
+    int seed;
     bool isVerbose;
     bool encryptOnlyDecryptor;
     bool dontDoFirstEncryption;
     bool dontDoSecondEncryption;
     bool useSeed;
-    bool saveRegisters;
-    int seed;
 } OPTIONS;
