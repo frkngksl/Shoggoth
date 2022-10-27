@@ -5,7 +5,7 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>-i C:\Users\picus\Desktop\ShellcodeCOFF\notepadSpawn.bin -o test.bin -v -k test -m raw -s 1234 --encrypt-only-decryptor</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-i C:\Users\picus\Desktop\ShellcodeCOFF\notepadSpawn.bin -o test.bin -v -k test -m raw -s 1234 --dont-do-first-encryption --dont-do-second-encryption</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>

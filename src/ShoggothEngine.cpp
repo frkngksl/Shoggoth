@@ -306,6 +306,7 @@ x86::Gp ShoggothPolyEngine::GetRandomGeneralPurposeRegister() {
 
 PBYTE ShoggothPolyEngine::StartPolymorphicEncrypt(PBYTE payload, int payloadSize, int &encryptedSize) {
     int firstGarbageSize = 0;
+    int secondGarbageSize = 0;
     int firstGarbageWithPayloadSize = 0;
     int firstDecryptorAndEncryptedPayloadSize = 0;
     int firstEncryptedPayloadSize = 0;
@@ -316,9 +317,11 @@ PBYTE ShoggothPolyEngine::StartPolymorphicEncrypt(PBYTE payload, int payloadSize
     int popStubSize = 0;
     int pushStubSize = 0;
     int returnSize = 0;
+    int encryptionDoneSize = 0;
     bool isRandomKey = false;
     bool secondEncryptionPerformed = false;
     PBYTE firstGarbage = NULL;
+    PBYTE secondGarbage = NULL;
     PBYTE firstGarbageWithPayload = NULL;
     PBYTE firstEncryptedPayload = NULL;
     PBYTE firstDecryptorAndEncryptedPayload = NULL;
@@ -329,10 +332,12 @@ PBYTE ShoggothPolyEngine::StartPolymorphicEncrypt(PBYTE payload, int payloadSize
     PBYTE popStub = NULL;
     PBYTE pushStub = NULL;
     PBYTE returnValue = NULL;
+    PBYTE encryptionDone = NULL;
     
 
     // Get Some Garbage Instructions
     firstGarbage = this->GenerateRandomGarbage(firstGarbageSize);
+    secondGarbage = this->GenerateRandomGarbage(secondGarbageSize);
     
 
     firstGarbageWithPayload = MergeChunks(firstGarbage, firstGarbageSize, payload, payloadSize);
@@ -426,21 +431,25 @@ PBYTE ShoggothPolyEngine::StartPolymorphicEncrypt(PBYTE payload, int payloadSize
         }
 
         // Arrange return values
-        returnValue = secondDecryptorAndEncryptedPayload;
-        encryptedSize = secondDecryptorAndEncryptedPayloadSize;
+        encryptionDone = secondDecryptorAndEncryptedPayload;
+        encryptionDoneSize = secondDecryptorAndEncryptedPayloadSize;
         secondEncryptionPerformed = true;
     }
     else {
         if (this->configurationOptions.isVerbose) {
             std::cout << "[+] Second encryption is skipped!" << std::endl;
         }
-        returnValue = firstDecryptorAndEncryptedPayload;
-        encryptedSize = firstDecryptorAndEncryptedPayloadSize;
+        encryptionDone = firstDecryptorAndEncryptedPayload;
+        encryptionDoneSize = firstDecryptorAndEncryptedPayloadSize;
     }
     
+    returnValue = MergeChunks(secondGarbage, secondGarbageSize, encryptionDone, encryptionDoneSize);
+    encryptedSize = encryptionDoneSize + secondGarbageSize;
+
     if (isRandomKey) {
         HeapFree(GetProcessHeap(), NULL, firstEncryptionKey);
     }
+
     return returnValue;
 }
 
