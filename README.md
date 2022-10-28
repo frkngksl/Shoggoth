@@ -28,6 +28,7 @@ Shoggoth is an open-source project based on C++ and asmjit library used to encry
 
 Shoggoth will generate an output file that stores the payload and its corresponding loader in an obfuscated form. Since the content of output is position-independent, it can be executed directly as a shellcode. While the payload is executing, it decrypts itself at the runtime. In addition to encryption routine, Shoggoth also adds garbage instructions, that change nothing, between routines.
 
+I started to develop this project to study different dynamic instruction generation approaches, assembly practices, and signature detections. I am planning to regularly update the repository with my new learnings. 
 
 
 ## What does Shoggoth mean?
