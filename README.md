@@ -50,6 +50,19 @@ A Shoggoth is a fictional monster in the Cthulhu Mythos. The beings were mention
 Since these creatures are like a sentient blob of self-shaping, gelatinous flesh and have no fixed shape in Lovecraft's descriptions, I want to give that name to a Polymorphic Encryptor tool. :slightly_smiling_face: 
 
 # Features
+## Execution Flow
+
+General execution flow of Shoggoth for an input file can be seen in the image below. You can observe this flow with the default configurations. 
+
+<img src="https://github.com/frkngksl/Shoggoth/blob/main/img/ShoggothExecutionFlow.png">
+
+Basically, Shoggoth first merges the precompiled loader shellcode according to the chosen mode (COFF or PE file) and the input file. It then adds multiple garbage instructions it generates to this merged paylaod. The stub containing the loader, garbage instruction, and the payload is encrypted first with RC4 encryption and then with randomly generated block encryption by combining corresponding decryptors. Finally, it adds a garbage instruction to the resulting block.
+
+## RC4 Cipher
+
+## Random Block Cipher
+
+## Garbage Instruction Generation
 
 # Usage
 
