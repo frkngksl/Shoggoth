@@ -53,6 +53,8 @@ Shoggoth can be used to encrypt given PE and COFF files so that both of them can
 
 Basically, in order to obtain shellcode with the C to Shellcode technique, I removed all the global variables in the loader source code, made all the strings stored in the stack, and resolved the Windows API functions' addresses by loading and parsing the necessary DLLs at runtime. Afterward, I determined the entry point with a linker script and compiled the code by using MinGW with various compilation flags. I extracted the .text section of the generated executable file and obtained the loader shellcode. Since the executable file obtained after editing the code as above does not contain any sections other than the .text section, the code in this section can be used as position-independent.
 
+Source code of these can be seen and edited from [COFFLoader](https://github.com/frkngksl/Shoggoth/tree/main/COFFLoader) and [PELoader](https://github.com/frkngksl/Shoggoth/tree/main/PELoader) directories. Also compiled versions of these source codes can be found in [stub](https://github.com/frkngksl/Shoggoth/tree/main/stub) directory. For now, If you want to edit or change these loaders, you should obey the signatures and replace the precompiled binaries from the stub directory.
+
 ## RC4 Cipher
 
 ## Random Block Cipher
