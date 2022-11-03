@@ -151,3 +151,4 @@ Since these creatures are like a sentient blob of self-shaping, gelatinous flesh
 - https://github.com/vxunderground/MalwareSourceCode
 - https://www.nayuki.io/page/rc4-cipher-in-x86-assembly
 - https://www.deviantart.com/halycon450/art/Shoggoth-914584713
+- https://www.artstation.com/burakkrtak (Logo Designer)
