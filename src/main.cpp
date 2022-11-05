@@ -8,8 +8,6 @@
 #include "OptionsHelper.h"
 
 
-typedef void(*RUNCOFF)(PBYTE, PCHAR, UINT32);
-
 int main(int argc, char *argv[]) {
 	bool peMode = false;
 	bool coffMode = true;
@@ -113,7 +111,8 @@ int main(int argc, char *argv[]) {
 		std::cout << "[!] Error on writing to " << configurationOptions.outputPath << std::endl;
 		return -1;
 	}
-	Func test = (Func)encryptedPayload;
-	test();
+
+	// Func test = (Func)encryptedPayload;
+	// test();
 	return 0;
 }

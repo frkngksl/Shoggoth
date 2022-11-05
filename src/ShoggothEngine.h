@@ -37,6 +37,8 @@ private:
 
     x86::Gp addressHolderForSecondEncryption;
 
+    x86::Gp firstAddressHolderForSecondEncryption;
+
     OPTIONS configurationOptions;
 
     // -----
@@ -86,6 +88,7 @@ private:
     PBYTE SecondDecryptor(PBYTE encryptedPayload, int payloadSize, int& secondDecryptorBlockSize);
     PBYTE SecondEncryption(PBYTE plainPayload, int payloadSize, int& newPayloadSize);
     void GetRandomSecondEncryption(ENCRYPT_TYPE* encryptTypeHolder);
+    void ChangeAddressHolder(ENCRYPT_TYPE* encryptTypeHolder);
     PBYTE GenerateSecondDecryptorStub(int& decryptorStubSize, int offsetToEncryptedPayload);
     void ApplyRandomSecondEncryption(uint64_t* blockCursor, ENCRYPT_TYPE* encryptTypeHolder);
 

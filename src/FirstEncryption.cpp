@@ -48,17 +48,6 @@ void ShoggothPolyEngine::EncryptRC4(RC4STATE* state, uint8_t* msg, size_t len) {
 }
 
 
-/*
-
-    TODO: Delta offset calculations can rouse the suspicions of antivirus programs, since normal
-    applications do not have a need for this kind of thing. The combination of call and pop r32
-    can cause the application to be suspected of containing malware. In order to prevent this,
-    we must generate extra code between these two instructions, and utilize a different means of getting values from the stack.
-
-    pop yerine mov+sub da koyabilirsin
-    Ayrica payloadin nerde oldugunu gormek için de takip etmek icin de index diye bi degisken kullaniyo
-*/
-
 PBYTE ShoggothPolyEngine::FirstDecryptor(PBYTE cipheredPayload, int cipheredPayloadSize, PBYTE key, int keySize,int& firstDecryptorSize, int& firstEncryptionStubSize) {
     // Dummy Decryptor
     RC4STATE state = { 0 };
@@ -70,25 +59,6 @@ PBYTE ShoggothPolyEngine::FirstDecryptor(PBYTE cipheredPayload, int cipheredPayl
     return RC4DecryptorStub;
 }
 
-
-// RDI, RSI, RDX, RCX, R8, R9 --> linux
-// RCX, RDX, R8 , R0
-
-/*
-     * Storage usage:
-     *   Bytes  Location  Description
-     *       1  al        Temporary s[i] per round (zero-extended to rax)
-     *       1  bl        Temporary s[j] per round (zero-extended to rbx)
-     *       1  cl        RC4 state variable i (zero-extended to rcx)
-     *       1  dl        RC4 state variable j (zero-extended to rdx)
-     *       8  rdi       Base address of RC4 state array of 256 bytes
-     *       8  rsi       Address of current message byte to encrypt
-     *       8  r8        End address of message array (msg + len)
-     *       8  rsp       x86-64 stack pointer
-     *       8  [rsp+0]   Caller's value of rbx
-     *
-     Decryptor - State Struct - Encrypted payload
-*/
 PBYTE ShoggothPolyEngine::GenerateRC4Decryptor(PBYTE payload, int payloadSize, RC4STATE* statePtr,int &decryptorSize, int& firstEncryptionStubSize) {
     PBYTE returnPtr = NULL;
     PBYTE codePtr = NULL;
@@ -227,23 +197,13 @@ PBYTE ShoggothPolyEngine::GenerateRC4Decryptor(PBYTE payload, int payloadSize, R
     // 
 
     if (this->configurationOptions.encryptOnlyDecryptor) {
-        // asmjitAssembler->pop(tempPop);
         // Current length + jmp + add + rc4state
         tempSize = asmjitAssembler->offset() - this->startOffset + 1 + sizeof(RC4STATE);
-        /*
-        if (tempPop == x86::r8 || tempPop == x86::r9 || tempPop == x86::r10 || tempPop == x86::r11 || tempPop == x86::r12 || tempPop == x86::r13 || tempPop == x86::r14 || tempPop == x86::r15) {
-            tempSize += 3;
-        }
-        else {
-            tempSize += 2;
-        }
-        */
+        
         // jmp is two bytes
         for (counterForNop = 0; tempSize % BLOCK_SIZE && counterForNop < BLOCK_SIZE - (tempSize % BLOCK_SIZE); counterForNop++) {
             asmjitAssembler->nop();
         }
-        // asmjitAssembler->add(tempPop, counterForNop);
-        // asmjitAssembler->jmp(tempPop);
 
     }
     asmjitAssembler->ret();

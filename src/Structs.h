@@ -20,6 +20,9 @@ typedef struct {
     uint64_t operandValue;
     asmjit::x86::Gp operandRegister;
     bool isRegister;
+    bool changeSourceRegister;
+    asmjit::x86::Gp oldSourceRegister;
+    asmjit::x86::Gp newSourceRegister;
 } ENCRYPT_TYPE;
 
 
