@@ -499,7 +499,7 @@ void ShoggothPolyEngine::GenerateJumpOverRandomData() {
 }
 
 void ShoggothPolyEngine::GenerateGarbageInstructions() {
-    int randomValue = RandomizeInRange(1, 4);
+    int randomValue = RandomizeInRange(1, 5);
     switch (randomValue) {
         case 1:
             this->GenerateGarbageFunction();
@@ -513,6 +513,8 @@ void ShoggothPolyEngine::GenerateGarbageInstructions() {
         case 4:
             this->GenerateJumpedInstructions();
             break;
+        case 5:
+            this->GenerateRandomUnsafeGarbage();
         default:
             break;
     }
@@ -853,7 +855,7 @@ void ShoggothPolyEngine::GenerateJumpedInstructions() {
     }
 }
 
-void ShoggothPolyEngine::RandomUnsafeGarbage() {
+void ShoggothPolyEngine::GenerateRandomUnsafeGarbage() {
     x86::Gp randomGeneralPurposeRegisterDest = this->GetRandomGeneralPurposeRegister();
     x86::Gp randomGeneralPurposeRegisterSource = this->GetRandomGeneralPurposeRegister();
     int randomIndexForSelect = RandomizeInRange(1, 16);

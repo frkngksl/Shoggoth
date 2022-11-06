@@ -68,7 +68,7 @@ private:
     
     PBYTE AssembleCodeHolder(int& codeSize);
 
-    void RandomUnsafeGarbage();
+    void GenerateRandomUnsafeGarbage();
     
     PBYTE FirstEncryption(PBYTE plainPayload, int payloadSize, PBYTE key, int keySize);
     PBYTE GenerateRC4Decryptor(PBYTE payload, int payloadSize, RC4STATE* statePtr, int& firstDecryptorSize, int& firstEncryptionStubSize);
