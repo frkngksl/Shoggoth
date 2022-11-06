@@ -522,17 +522,23 @@ void ShoggothPolyEngine::GenerateGarbageInstructions() {
 
 void ShoggothPolyEngine::GenerateGarbageFunction() {
     BYTE randomByte = (BYTE)RandomizeInRange(1, 255);
+    bool subAdded = false;
     if (RandomizeBool())
     {
         asmjitAssembler->push(x86::rbp);
         asmjitAssembler->mov(x86::rbp, x86::rsp);
-        asmjitAssembler->sub(x86::rsp, randomByte);
-
     }
     else {
         asmjitAssembler->enter(imm(0), imm(0));
     }
+    if (RandomizeBool()) {
+        asmjitAssembler->sub(x86::rsp, randomByte);
+        subAdded = true;
+    }
     this->GenerateGarbageInstructions();
+    if (subAdded) {
+        asmjitAssembler->add(x86::rsp, randomByte);
+    }
     if (RandomizeBool())
     {
         asmjitAssembler->leave();
