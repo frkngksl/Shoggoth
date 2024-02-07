@@ -19,7 +19,7 @@ bin/PELoader.bin: bin/PELoader.exe
 %.o: %.asm
 	nasm -f win64 $< -o $@
 
-%.o: src/%.c
+%.o: %.c
 	$(CC) $< $(CFLAGS) -c -o $@ $(CCLDFLAGS)
 
 clean:
