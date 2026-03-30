@@ -18,7 +18,7 @@
 </div>
 
 **Presented at**
-- [BlackHat Europe 2022 Arsenal](https://www.blackhat.com/eu-22/arsenal/schedule/index.html#shoggoth-asmjit-based-polymorphic-encryptor-29588) - [Presentation Record](https://www.youtube.com/watch?v=ECbQnbPxz5g)
+- [BlackHat Europe 2022 Arsenal](https://www.blackhat.com/eu-22/arsenal/schedule/index.html#shoggoth-asmjit-based-polymorphic-encryptor-29588) - [ Presentation Record](https://www.youtube.com/watch?v=ECbQnbPxz5g)
 
 # Introduction
 
