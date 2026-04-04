@@ -157,3 +157,7 @@ Since these creatures are like a sentient blob of self-shaping, gelatinous flesh
 - https://www.deviantart.com/halycon450/art/Shoggoth-914584713
 - https://www.artstation.com/burakkrtak (Logo Designer)
 - https://github.com/trustedsec/COFFLoader/blob/main/beacon_generate.py
+
+## Disclaimer
+
+For authorized security testing only. Misuse of this tool against systems without explicit permission is illegal.
